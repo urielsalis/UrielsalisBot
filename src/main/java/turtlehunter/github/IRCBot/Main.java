@@ -12,6 +12,7 @@ import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * turtlehunter.github.IRCBot - uriel IRCBot 21/2/2016
@@ -19,8 +20,10 @@ import java.util.ArrayList;
 
 class Main
 {
-    private ArrayList<String> devices = new ArrayList<String>();
-    private ArrayList<Driver> drivers = new ArrayList<Driver>();
+    private ArrayList<String> devices = new ArrayList<>();
+    private ArrayList<Driver> drivers = new ArrayList<>();
+    private HashMap<String, String>  notes = new HashMap<>();
+
     private IRCBot ircBot;
     private Kryo kryo;
     private static Main main;
@@ -47,22 +50,29 @@ class Main
                 Input input = new Input(new FileInputStream("save.bin"));
                 drivers = kryo.readObject(input, ArrayList.class);
                 input.close();
+                Input input1 = new Input(new FileInputStream("notes.bin"));
+                notes = kryo.readObject(input1, HashMap.class);
+                input1.close();
                 ircBot.sendMessage(channel, "UrielsalisBot V1.0. Loaded from file");
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
             }
         } else {
-            ircBot.sendMessage(channel, "UrielsalisBot V1.0. Downloading Intel database, this might(will) take a while");
+            ircBot.sendMessage(channel, "UrielsalisBot V1.1. Downloading Intel database, this might(will) take a while");
             updateDatabase();
             getVersion();
             try {
                 Output output = new Output(new FileOutputStream("save.bin"));
                 kryo.writeObject(output, drivers);
                 output.close();
+                Output output1 = new Output(new FileOutputStream("notes.bin"));
+                kryo.writeObject(output1, notes);
+                output1.close();
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
             }
         }
+
         int count = 0;
         for(Driver dri: drivers) {
             System.out.println(dri.name + " - " + dri.url);
@@ -72,6 +82,7 @@ class Main
             }
             System.out.println();
         }
+
         ircBot.sendMessage(channel, "Finished setting up. " + count + " drivers loaded");
     }
 
@@ -202,17 +213,34 @@ class Main
     }
 
     private String findDriver(String graphiccard, String os) {
+        graphiccard = graphiccard.toLowerCase();
+        os = os.toLowerCase();
         for(Driver drv: drivers) {
-            if(drv.name.contains(graphiccard) || graphiccard.contains(drv.name)) {
+            if(drv.name.toLowerCase().contains(graphiccard) || graphiccard.contains(drv.name.toLowerCase())) {
                 String result = "\u000304" + drv.url + "\u000f";
+                for(String str: notes.keySet()) {
+                    if(str.contains(drv.name.toLowerCase()) || drv.name.toLowerCase().contains(str) || str.contains(drv.url.toLowerCase()) || drv.url.toLowerCase().contains(str)) {
+                        result += "\n\u000312" + notes.get(str) + "\u000F";
+                    }
+                }
                 for(Download down: drv.downloads) {
-                    if (down.os.contains(os.replace(" 32", "").replace(" 64", "")) && !down.version.contains("Previously Released")) {
-                        if (os.contains("32") && down.os.contains("32") || os.contains("64") && down.os.contains("64")) {
+                    if (down.os.toLowerCase().contains(os.replace(" 32", "").replace(" 64", "")) && !down.url.toLowerCase().contains("inf") && !down.version.toLowerCase().contains("Previously Released")) {
+                        if (os.contains("32") && down.os.toLowerCase().contains("32") || os.contains("64") && down.os.toLowerCase().contains("64")) {
                             result += "\n\u000307" + down.version + "\u000f for \u000307" + down.os + "\u000f - \u0002" + down.url + "\u000f";
+                            for(String str: notes.keySet()) {
+                                if(str.contains(down.name.toLowerCase()) || down.name.toLowerCase().contains(str) || str.contains(down.url.toLowerCase()) || down.url.toLowerCase().contains(str)) {
+                                    result += "\n\u000312" + notes.get(str) + "\u000F";
+                                }
+                            }
                         } else if (os.contains("64") && !down.os.contains("64") || os.contains("32") && !down.os.contains("32")) {
                             //do nothing
                         } else {
                             result += "\n\u000307" + down.version + "\u000f for \u000307" + down.os + "\u000f - \u0002" + down.url + "\u000f";
+                            for(String str: notes.keySet()) {
+                                if(str.toLowerCase().contains(down.name.toLowerCase()) || down.name.toLowerCase().contains(str.toLowerCase()) || str.toLowerCase().contains(down.url.toLowerCase()) || down.url.toLowerCase().contains(str.toLowerCase())) {
+                                    result += "\n\u000312" + notes.get(str) + "\u000F";
+                                }
+                            }
                         }
                     }
                 }
@@ -228,6 +256,16 @@ class Main
 
     private void _received(String channel, String user, String login, String hostname, String message) {
         if(message.equals("!quit")) {
+            try {
+                Output output = new Output(new FileOutputStream("save.bin"));
+                kryo.writeObject(output, drivers);
+                output.close();
+                Output output1 = new Output(new FileOutputStream("notes.bin"));
+                kryo.writeObject(output1, notes);
+                output1.close();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
             System.out.println("Quit");
             ircBot.disconnect();
             ircBot.dispose();
@@ -238,11 +276,24 @@ class Main
             ircBot.disconnect();
             ircBot.dispose();
             System.exit(0);
+        } else if(message.equals("!clearnotes")) {
+            File file = new File("notes.bin");
+            file.delete();
+            notes = new HashMap<>();
+        } else if(message.equals(".!help")) {
+            sendMSG(channel, "!quit                                       Quits\n!cleardatabase                              Clears the database\n!clearnotes                                    Clears the notes\n!add <pattern> Note <note>                  Adds a note\n!getDriver <pattern> Windows <os> [32/64]   Gets info of pattern from OS\n!getDrivers                                 Sames a !getDriver");
         }
         String command = message.substring(0, message.indexOf(" "));
-        String driver = message.substring(message.indexOf(" ")+1, message.indexOf("Windows")-1);
-        String os = message.substring(message.indexOf("Windows"));
-        if(command.equals("!getDriver") || command.equals("!getDrivers")) {
+        String driver = "";
+        String os = "";
+        if(message.contains("Windows")) driver = message.substring(message.indexOf(" ")+1, message.indexOf("Windows")-1);
+        if(message.contains("Windows")) os = message.substring(message.indexOf("Windows"));
+        System.out.println(command + "-" + driver + "-" + message);
+        if(command.equals("!add")) {
+            System.out.println("!add");
+            System.out.println(message.substring(message.indexOf(" ")+1, message.indexOf(" Note ")-1) + " - " + message.substring(message.indexOf(" Note ")+6));
+            notes.put(message.substring(message.indexOf(" ")+1, message.indexOf(" Note ")-1), message.substring(message.indexOf(" Note ")+6));
+        } else if(command.equals("!getDriver") || command.equals("!getDrivers")) {
             sendMSG(channel, findDriver(driver, os));
         } else if(user.equals("PangeaBot") || user.equals("urielsalis")) {
             //<PangeaBot> (webrosc) n/a | n/a | Windows 7 Professional 64-bit | Enum\PCI\VEN_8086&DEV_29B2&SUBSYS_02111028&REV_02 (Intel(R) Q35 Express Chipset Family)
