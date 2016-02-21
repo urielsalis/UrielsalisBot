@@ -53,7 +53,6 @@ class Main
                 Input input1 = new Input(new FileInputStream("notes.bin"));
                 notes = kryo.readObject(input1, HashMap.class);
                 input1.close();
-                ircBot.sendMessage(channel, "UrielsalisBot V1.0. Loaded from file");
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
             }
@@ -71,19 +70,19 @@ class Main
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
             }
-        }
 
-        int count = 0;
-        for(Driver dri: drivers) {
-            System.out.println(dri.name + " - " + dri.url);
-            count += dri.downloads.size();
-            for(Download down: dri.downloads) {
-                System.out.println(down.name + " - " + down.version + " for " + down.os + " at " + down.url);
+            int count = 0;
+            for(Driver dri: drivers) {
+                System.out.println(dri.name + " - " + dri.url);
+                count += dri.downloads.size();
+                for(Download down: dri.downloads) {
+                    System.out.println(down.name + " - " + down.version + " for " + down.os + " at " + down.url);
+                }
+                System.out.println();
             }
-            System.out.println();
-        }
 
-        ircBot.sendMessage(channel, "Finished setting up. " + count + " drivers loaded");
+            ircBot.sendMessage(channel, "Finished setting up. " + count + " drivers loaded");
+        }
     }
 
     private void updateDatabase() {
@@ -94,6 +93,8 @@ class Main
         boolean startCopying = false;
         boolean firstTRSkipped = false;
         boolean copyNext = false;
+
+        //Intel
 
         try {
             url = new URL("http://www.intel.com/content/www/us/en/support/graphics-drivers/000005526.html");
@@ -130,6 +131,9 @@ class Main
                 // nothing to see here
             }
         }
+
+        //AMD
+
 
         for(String str: devices) {
             System.out.println(str);
@@ -209,7 +213,23 @@ class Main
 
     private String removeEdition(String replace) {
         String[] strs = replace.split(" ");
-        return strs[0] + " " + strs[1] + " " + strs[3];
+        String result = "";
+        for(String str: strs) {
+            if(str.equals("Windows") || isInteger(str)) result += str + " ";
+        }
+        return result.substring(0, result.length()-1);
+    }
+
+    public static boolean isInteger(String s) {
+        try {
+            Integer.parseInt(s);
+        } catch(NumberFormatException e) {
+            return false;
+        } catch(NullPointerException e) {
+            return false;
+        }
+        // only got here if we didn't return false
+        return true;
     }
 
     private String findDriver(String graphiccard, String os) {
@@ -223,26 +243,31 @@ class Main
                         result += "\n\u000312" + notes.get(str) + "\u000F";
                     }
                 }
-                for(Download down: drv.downloads) {
-                    if (down.os.toLowerCase().contains(os.replace(" 32", "").replace(" 64", "")) && !down.url.toLowerCase().contains("inf") && !down.version.toLowerCase().contains("Previously Released")) {
-                        if (os.contains("32") && down.os.toLowerCase().contains("32") || os.contains("64") && down.os.toLowerCase().contains("64")) {
-                            result += "\n\u000307" + down.version + "\u000f for \u000307" + down.os + "\u000f - \u0002" + down.url + "\u000f";
-                            for(String str: notes.keySet()) {
-                                if(str.contains(down.name.toLowerCase()) || down.name.toLowerCase().contains(str) || str.contains(down.url.toLowerCase()) || down.url.toLowerCase().contains(str)) {
-                                    result += "\n\u000312" + notes.get(str) + "\u000F";
+                String exists = checkDrivers(drv, os);
+                if(exists=="true") {
+                    for(Download down: drv.downloads) {
+                        if (down.os.toLowerCase().contains(os.replace(" 32", "").replace(" 64", "")) && !down.url.toLowerCase().contains("inf") && !down.url.toLowerCase().contains("zip") && !down.version.toLowerCase().contains("previously released")) {
+                            if (os.contains("32") && down.os.toLowerCase().contains("32") || os.contains("64") && down.os.toLowerCase().contains("64")) {
+                                result += "\n\u000307" + down.version + "\u000f for \u000307" + down.os + "\u000f - \u0002" + down.url + "\u000f";
+                                for(String str: notes.keySet()) {
+                                    if(str.contains(down.name.toLowerCase()) || down.name.toLowerCase().contains(str) || str.contains(down.url.toLowerCase()) || down.url.toLowerCase().contains(str)) {
+                                        result += "\n\u000312" + notes.get(str) + "\u000F";
+                                    }
                                 }
-                            }
-                        } else if (os.contains("64") && !down.os.contains("64") || os.contains("32") && !down.os.contains("32")) {
-                            //do nothing
-                        } else {
-                            result += "\n\u000307" + down.version + "\u000f for \u000307" + down.os + "\u000f - \u0002" + down.url + "\u000f";
-                            for(String str: notes.keySet()) {
-                                if(str.toLowerCase().contains(down.name.toLowerCase()) || down.name.toLowerCase().contains(str.toLowerCase()) || str.toLowerCase().contains(down.url.toLowerCase()) || down.url.toLowerCase().contains(str.toLowerCase())) {
-                                    result += "\n\u000312" + notes.get(str) + "\u000F";
+                            } else if (os.contains("64") && !down.os.contains("64") || os.contains("32") && !down.os.contains("32")) {
+                                //do nothing
+                            } else {
+                                result += "\n\u000307" + down.version + "\u000f for \u000307" + down.os + "\u000f - \u0002" + down.url + "\u000f";
+                                for(String str: notes.keySet()) {
+                                    if(str.toLowerCase().contains(down.name.toLowerCase()) || down.name.toLowerCase().contains(str.toLowerCase()) || str.toLowerCase().contains(down.url.toLowerCase()) || down.url.toLowerCase().contains(str.toLowerCase())) {
+                                        result += "\n\u000312" + notes.get(str) + "\u000F";
+                                    }
                                 }
                             }
                         }
                     }
+                } else {
+                    return "\n\u000307" + exists + "\u000F";
                 }
                 return result;
             }
@@ -286,19 +311,21 @@ class Main
         String command = message.substring(0, message.indexOf(" "));
         String driver = "";
         String os = "";
-        if(message.contains("Windows")) driver = message.substring(message.indexOf(" ")+1, message.indexOf("Windows")-1);
-        if(message.contains("Windows")) os = message.substring(message.indexOf("Windows"));
-        System.out.println(command + "-" + driver + "-" + message);
+        if(!command.equals("!add")) driver = message.substring(message.indexOf(" ")+1, message.indexOf("Windows")-1);
+        if(!command.equals("!add")) os = message.substring(message.indexOf("Windows"));
         if(command.equals("!add")) {
-            System.out.println("!add");
-            System.out.println(message.substring(message.indexOf(" ")+1, message.indexOf(" Note ")-1) + " - " + message.substring(message.indexOf(" Note ")+6));
             notes.put(message.substring(message.indexOf(" ")+1, message.indexOf(" Note ")-1), message.substring(message.indexOf(" Note ")+6));
         } else if(command.equals("!getDriver") || command.equals("!getDrivers")) {
-            sendMSG(channel, findDriver(driver, os));
+            if(message.toLowerCase().contains("nvidia")) {
+                sendMSG(channel, "GO TEAM GREEN!!\nSorry, not implemented yet");
+            } else if(message.toLowerCase().contains("amd")) {
+                sendMSG(channel, "GO TEAM RED!!\nSorry, not implemented yet");
+            } else {
+                sendMSG(channel, findDriver(driver, os));
+            }
         } else if(user.equals("PangeaBot") || user.equals("urielsalis")) {
             //<PangeaBot> (webrosc) n/a | n/a | Windows 7 Professional 64-bit | Enum\PCI\VEN_8086&DEV_29B2&SUBSYS_02111028&REV_02 (Intel(R) Q35 Express Chipset Family)
             if(message.contains("Graphics card")) {
-                System.out.println(message);
                 String str[] = message.split(", ");
                 for(String stR: str) System.out.print(stR + "-");
                 String graphics = null;
@@ -310,22 +337,57 @@ class Main
                     if (!str2.equals("Not found")) sendMSG(channel, str2);
                 }
             } else {
-                String data[] = message.split(" \\| ");
-                String os2 = removeEdition(data[2].replace("-bit", "")).replace("64", "").replace("32", "");
-                if (data[2].contains("32")) os2 += "32";
-                else if (data[2].contains("64")) os2 += "64";
+                String data[] = message.split("\\|");
+                String os2 = removeEdition(data[2].replace("-bit", "")).replace(" 64", "").replace(" 32", "");
+                if (data[2].contains("32")) os2 += " 32";
+                else if (data[2].contains("64")) os2 += " 64";
                 tempOS = os2;
                 String tmp = data[3].replace("(R)", "");
-                String graphics = tmp.substring(tmp.indexOf("(") + 1, tmp.indexOf(")")).replace("(R)", "").replace("Family", "").replace("-Chipsatzfamilie", "");
+                String graphics = filter(tmp.substring(tmp.indexOf("(") + 1, tmp.indexOf(")")).replace("(R)", "").replace("Family", "").replace("-Chipsatzfamilie", ""));
+                if(graphics.contains("45 Express Chipset")) graphics = "4 Series";
+                System.out.println(os2 + "-" + graphics);
                 String str2 = findDriver(graphics, os2);
+                System.out.println(str2);
                 if (!str2.equals("Not found")) sendMSG(channel, str2);
             }
         }
     }
 
+    private String filter(String family) {
+        String str[] = family.split(" ");
+        String result = "";
+        for(String stri: str) {
+            if(!stri.contains("/")) {
+                result += stri + " ";
+            } else {
+                result += stri.split("/")[0] + " ";
+            }
+        }
+        return result.substring(0, result.length()-1);
+    }
+
     private void sendMSG(String channel, String str) {
         String strs[] = str.split("\n");
         for(String str2: strs) ircBot.sendMessage(channel, str2);
+    }
+
+    public String checkDrivers(Driver driver, String os) {
+        boolean bit64 = os.contains("64");
+        String windows = os.split(" ")[1];
+        String higher = "Too old";
+
+        for(Download download: driver.downloads) {
+            boolean bit642 = download.os.contains("64");
+            if(bit64==bit642 && download.os.contains(windows)) return "true";
+            if(download.os.contains("10")) higher = "10"; //bruteforce way but whatever
+            else if(download.os.contains("8.1") && !higher.equals("10")) higher = "8.1";
+            else if(download.os.contains("8") && !higher.equals("10") && !higher.equals("8.1")) higher = "8";
+            else if(download.os.contains("7") && !higher.equals("10") && !higher.equals("8.1")&& !higher.equals("8")) higher = "7";
+            else if(download.os.contains("Vista") && !higher.equals("10") && !higher.equals("8.1")&& !higher.equals("8")&& !higher.equals("7")) higher = "Vista";
+            else if(download.os.contains("XP") && !higher.equals("10") && !higher.equals("8.1")&& !higher.equals("8")&& !higher.equals("7") && !higher.equals("Vista")) higher = "XP";
+            else if(download.os.contains("2000") && !higher.equals("10") && !higher.equals("8.1")&& !higher.equals("8")&& !higher.equals("7") && !higher.equals("Vista") && !higher.equals("XP")) higher = "2000";
+        }
+        return "No drivers for Windows "+windows+". Latest is Windows "+higher;
     }
 }
 
