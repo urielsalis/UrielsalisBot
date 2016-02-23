@@ -13,6 +13,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Scanner;
 
 /**
  * turtlehunter.github.IRCBot - uriel IRCBot 21/2/2016
@@ -27,7 +28,7 @@ class Main
     private IRCBot ircBot;
     private Kryo kryo;
     private static Main main;
-    String channel = "#minecrafthelp.breakroom";
+    String channel;
     private String tempOS;
 
     public static void main(String[] args)
@@ -36,6 +37,11 @@ class Main
     }
 
     public Main() {
+        try {
+            channel = new Scanner(new File("channel.txt")).useDelimiter("\\Z").next();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
         ircBot = new IRCBot();
         try {
             ircBot.connect("irc.esper.net");
