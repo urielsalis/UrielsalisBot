@@ -24,32 +24,24 @@ class Main
     private ArrayList<String> devices = new ArrayList<>();
     private ArrayList<Driver> drivers = new ArrayList<>();
     private HashMap<String, String>  notes = new HashMap<>();
-
+    private String tempOS = "";
     private IRCBot ircBot;
     private Kryo kryo;
     private static Main main;
     String channel;
-    private String tempOS;
 
     public static void main(String[] args)
     {
+        LogFactory.getFactory().setAttribute("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog");
         main = new Main();
     }
 
     public Main() {
-        try {
-            channel = new Scanner(new File("channel.txt")).useDelimiter("\\Z").next();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-        ircBot = new IRCBot();
-        try {
-            ircBot.connect("irc.esper.net");
-        } catch (IOException | IrcException e) {
-            e.printStackTrace();
-        }
-        System.out.println("Connected: " + ircBot.isConnected());
-        ircBot.joinChannel(channel);
+        initBot();
+        loadOrDownload();
+    }
+
+    private void loadOrDownload() {
         kryo = new Kryo();
         if(new File("save.bin").exists()) {
             try {
@@ -66,16 +58,6 @@ class Main
             ircBot.sendMessage(channel, "UrielsalisBot V1.1. Downloading Intel database, this might(will) take a while");
             updateDatabase();
             getVersion();
-            try {
-                Output output = new Output(new FileOutputStream("save.bin"));
-                kryo.writeObject(output, drivers);
-                output.close();
-                Output output1 = new Output(new FileOutputStream("notes.bin"));
-                kryo.writeObject(output1, notes);
-                output1.close();
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            }
 
             int count = 0;
             for(Driver dri: drivers) {
@@ -89,6 +71,22 @@ class Main
 
             ircBot.sendMessage(channel, "Finished setting up. " + count + " drivers loaded");
         }
+    }
+
+    public void initBot() {
+        try {
+            channel = new Scanner(new File("channel.txt")).useDelimiter("\\Z").next();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        ircBot = new IRCBot();
+        try {
+            ircBot.connect("irc.esper.net");
+        } catch (IOException | IrcException e) {
+            e.printStackTrace();
+        }
+        System.out.println("Connected: " + ircBot.isConnected());
+        ircBot.joinChannel(channel);
     }
 
     private void updateDatabase() {
@@ -126,8 +124,7 @@ class Main
                     }
                 }
             }
-        } catch (MalformedURLException mue) {
-            mue.printStackTrace();
+            save();
         } catch (IOException ioe) {
             ioe.printStackTrace();
         } finally {
@@ -149,9 +146,6 @@ class Main
     }
 
     public void getVersion() {
-
-        LogFactory.getFactory().setAttribute("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog");
-
         WebClient webClient = new WebClient(BrowserVersion.FIREFOX_38);
         webClient.getOptions().setRedirectEnabled(true);
         webClient.getOptions().setActiveXNative(false);
@@ -285,40 +279,38 @@ class Main
     }
 
     private void _received(String channel, String user, String login, String hostname, String message) {
-        if(message.equals("!quit")) {
-            try {
-                Output output = new Output(new FileOutputStream("save.bin"));
-                kryo.writeObject(output, drivers);
-                output.close();
-                Output output1 = new Output(new FileOutputStream("notes.bin"));
-                kryo.writeObject(output1, notes);
-                output1.close();
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            }
-            System.out.println("Quit");
-            ircBot.disconnect();
-            ircBot.dispose();
-            System.exit(0);
+        switch (message) {
+            case "!quit":
+                save();
+                System.out.println("Quit");
+                ircBot.disconnect();
+                ircBot.dispose();
+                System.exit(0);
 
-        } else if(message.equals("!cleardatabase")) {
-            File file = new File("save.bin");
-            file.delete();
-            ircBot.disconnect();
-            ircBot.dispose();
-            System.exit(0);
-        } else if(message.equals("!clearnotes")) {
-            File file = new File("notes.bin");
-            file.delete();
-            notes = new HashMap<>();
-        } else if(message.equals(".!help")) {
-            sendMSG(channel, "!quit Quits, !cleardatabase Clears the database, !clearnotes Clears the notes, !add <pattern> Note <note> Adds a note, !getDriver <pattern> Windows <os> [32/64] Gets info of pattern from OS, !getDrivers sames a !getDriver, !getOS <driver> Get latest version of driver");
+            case "!cleardatabase": {
+                File file = new File("save.bin");
+                file.delete();
+                ircBot.disconnect();
+                ircBot.dispose();
+                System.exit(0);
+            }
+            case "!clearnotes": {
+                File file = new File("notes.bin");
+                file.delete();
+                notes = new HashMap<>();
+                break;
+            }
+            case ".!help":
+                sendMSG(channel, "!quit Quits, !cleardatabase Clears the database, !clearnotes Clears the notes, !add <pattern> Note <note> Adds a note, !getDriver <pattern> Windows <os> [32/64] Gets info of pattern from OS, !getDrivers sames a !getDriver, !getOS <driver> Get latest version of driver");
+                break;
         }
         String command = message.substring(0, message.indexOf(" "));
         String driver = "";
         String os = "";
-        if (!command.equals("!add") && !command.equals("!getOS")) driver = message.substring(message.indexOf(" ") + 1, message.indexOf("Windows") - 1);
-        if(!command.equals("!add") && !command.equals("!getOS")) os = message.substring(message.indexOf("Windows"));
+        if (!command.equals("!add") && !command.equals("!getOS")) {
+            driver = message.substring(message.indexOf(" ") + 1, message.indexOf("Windows") - 1);
+            os = message.substring(message.indexOf("Windows"));
+        }
         if(command.equals("!add") && !command.equals("!getOS")) {
             notes.put(message.substring(message.indexOf(" ")+1, message.indexOf(" Note ")-1), message.substring(message.indexOf(" Note ")+6));
         } else if(command.equals("!getDriver") || command.equals("!getDrivers")) {
@@ -334,18 +326,7 @@ class Main
             System.out.println(drv);
             for(Driver d: drivers) {
                 if(d.name.toLowerCase().contains(drv) || drv.contains(d.name.toLowerCase())) {
-                    String higher = "Too old";
-
-                    for(Download download: d.downloads) {
-                        if(download.os.contains("10")) higher = "10"; //bruteforce way but whatever
-                        else if(download.os.contains("8.1") && !higher.equals("10")) higher = "8.1";
-                        else if(download.os.contains("8") && !higher.equals("10") && !higher.equals("8.1")) higher = "8";
-                        else if(download.os.contains("7") && !higher.equals("10") && !higher.equals("8.1")&& !higher.equals("8")) higher = "7";
-                        else if(download.os.contains("Vista") && !higher.equals("10") && !higher.equals("8.1")&& !higher.equals("8")&& !higher.equals("7")) higher = "Vista";
-                        else if(download.os.contains("XP") && !higher.equals("10") && !higher.equals("8.1")&& !higher.equals("8")&& !higher.equals("7") && !higher.equals("Vista")) higher = "XP";
-                        else if(download.os.contains("2000") && !higher.equals("10") && !higher.equals("8.1")&& !higher.equals("8")&& !higher.equals("7") && !higher.equals("Vista") && !higher.equals("XP")) higher = "2000";
-                    }
-                    sendMSG(channel, "Latest is Windows "+higher + " from Driver at " + d.url);
+                    sendMSG(channel, "Latest is Windows "+checkDrivers(d) + " from Driver at " + d.url);
                     break;
                 }
             }
@@ -388,6 +369,19 @@ class Main
         }
     }
 
+    private void save() {
+        try {
+            Output output = new Output(new FileOutputStream("save.bin"));
+            kryo.writeObject(output, drivers);
+            output.close();
+            Output output1 = new Output(new FileOutputStream("notes.bin"));
+            kryo.writeObject(output1, notes);
+            output1.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
     private String filter(String family) {
         String str[] = family.split(" ");
         String result = "";
@@ -423,6 +417,21 @@ class Main
             else if(download.os.contains("2000") && !higher.equals("10") && !higher.equals("8.1")&& !higher.equals("8")&& !higher.equals("7") && !higher.equals("Vista") && !higher.equals("XP")) higher = "2000";
         }
         return "No drivers for Windows "+windows+". Latest is Windows "+higher;
+    }
+
+    public String checkDrivers(Driver driver) {
+        String higher = "Too old";
+
+        for(Download download: driver.downloads) {
+            if(download.os.contains("10")) higher = "10"; //bruteforce way but whatever
+            else if(download.os.contains("8.1") && !higher.equals("10")) higher = "8.1";
+            else if(download.os.contains("8") && !higher.equals("10") && !higher.equals("8.1")) higher = "8";
+            else if(download.os.contains("7") && !higher.equals("10") && !higher.equals("8.1")&& !higher.equals("8")) higher = "7";
+            else if(download.os.contains("Vista") && !higher.equals("10") && !higher.equals("8.1")&& !higher.equals("8")&& !higher.equals("7")) higher = "Vista";
+            else if(download.os.contains("XP") && !higher.equals("10") && !higher.equals("8.1")&& !higher.equals("8")&& !higher.equals("7") && !higher.equals("Vista")) higher = "XP";
+            else if(download.os.contains("2000") && !higher.equals("10") && !higher.equals("8.1")&& !higher.equals("8")&& !higher.equals("7") && !higher.equals("Vista") && !higher.equals("XP")) higher = "2000";
+        }
+        return "Latest is Windows "+higher;
     }
 }
 
