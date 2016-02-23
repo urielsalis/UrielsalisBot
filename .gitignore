@@ -1,1 +1,8 @@
 channel.txt
+.idea
+target
+out
+*.iml
+*/MANIFEST.MF
+*.bin
+dependency-reduced-pom.xml
