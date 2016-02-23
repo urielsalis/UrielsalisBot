@@ -7,14 +7,10 @@ import com.gargoylesoftware.htmlunit.BrowserVersion;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.gargoylesoftware.htmlunit.javascript.background.JavaScriptJobManager;
-import io.github.turtlehunter.ircbot.Download;
-import io.github.turtlehunter.ircbot.Driver;
-import io.github.turtlehunter.ircbot.IRCBot;
 import org.apache.commons.logging.LogFactory;
 import org.jibble.pircbot.IrcException;
 
 import java.io.*;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,7 +28,7 @@ class Main
     private String tempOS = "";
     private IRCBot ircBot;
     private Kryo kryo;
-    private static Main main;
+    public static Main main;
     String channel;
 
     public static void main(String[] args)
@@ -78,7 +74,7 @@ class Main
         }
     }
 
-    public void initBot() {
+    private void initBot() {
         try {
             channel = new Scanner(new File("channel.txt")).useDelimiter("\\Z").next();
         } catch (FileNotFoundException e) {
@@ -150,7 +146,7 @@ class Main
 
     }
 
-    public void getVersion() {
+    private void getVersion() {
         WebClient webClient = new WebClient(BrowserVersion.FIREFOX_38);
         webClient.getOptions().setRedirectEnabled(true);
         webClient.getOptions().setActiveXNative(false);
@@ -159,7 +155,7 @@ class Main
         for(String str: devices) {
             String strs[] = str.split(" ");
             String url = strs[0];
-            String name = join(strs);
+            String name = Util.join(strs);
             Driver driver = new Driver(name, url);
             try {
 
@@ -173,14 +169,14 @@ class Main
                     Thread.sleep(1000);
                 }
 
-                parseWebpage2(driver, page.getBody().asXml());
+                parseDriver(driver, page.getBody().asXml());
             } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
             }
         }
     }
 
-    private void parseWebpage2(Driver driver, String body) {
+    private void parseDriver(Driver driver, String body) {
         System.out.print("Parsing " + driver.name + " " + driver.url);
         String str[] = body.split("\n");
         boolean save = false;
@@ -204,36 +200,7 @@ class Main
         System.out.println(" Found " + driver.downloads.size() + " drivers");
     }
 
-    private String join(String[] strs) {
-        String str = "";
-        for (int i = 1; i < strs.length; i++) {
-            str += strs[i] + " ";
-        }
-        return str;
-    }
-
-    private String removeEdition(String replace) {
-        String[] strs = replace.split(" ");
-        String result = "";
-        for(String str: strs) {
-            if(str.equals("Windows") || isInteger(str)) result += str + " ";
-        }
-        return result.substring(0, result.length()-1);
-    }
-
-    public static boolean isInteger(String s) {
-        try {
-            Integer.parseInt(s);
-        } catch(NumberFormatException e) {
-            return false;
-        } catch(NullPointerException e) {
-            return false;
-        }
-        // only got here if we didn't return false
-        return true;
-    }
-
-    private String findDriver(String graphiccard, String os) {
+    public String findDriver(String graphiccard, String os) {
         graphiccard = graphiccard.toLowerCase().replace("(r)", "");
         os = os.toLowerCase();
         if(graphiccard.replaceAll("\\s+","").equals("intelhdgraphics")) return "Search in http://www.intel.com/content/www/us/en/support/graphics-drivers/000005538.html";
@@ -275,11 +242,7 @@ class Main
         return "Not found";
     }
 
-    public static void received(String channel, String user, String login, String hostname, String message) {
-        main._received(channel, user, login, hostname, message);
-    }
-
-    private void _received(String channel, String user, String login, String hostname, String message) {
+    public void received(String channel, String user, String login, String hostname, String message) {
         switch (message) {
             case "!quit":
                 save();
@@ -346,7 +309,7 @@ class Main
                 }
             } else {
                 String data[] = message.split("\\|");
-                String os2 = removeEdition(data[2].replace("-bit", "")).replace(" 64", "").replace(" 32", "");
+                String os2 = Util.removeEdition(data[2].replace("-bit", "")).replace(" 64", "").replace(" 32", "");
                 if (data[2].contains("32")) os2 += " 32";
                 else if (data[2].contains("64")) os2 += " 64";
                 tempOS = os2;
@@ -370,7 +333,7 @@ class Main
         }
     }
 
-    private void save() {
+    public void save() {
         try {
             Output output = new Output(new FileOutputStream("save.bin"));
             kryo.writeObject(output, drivers);
@@ -383,7 +346,7 @@ class Main
         }
     }
 
-    private String filter(String family) {
+    public String filter(String family) {
         String str[] = family.split(" ");
         String result = "";
         for(String stri: str) {
@@ -396,7 +359,7 @@ class Main
         return result.substring(0, result.length()-1);
     }
 
-    private void sendMSG(String channel, String str) {
+    public void sendMSG(String channel, String str) {
         String strs[] = str.split("\n");
         for(String str2: strs) ircBot.sendMessage(channel, str2);
     }

@@ -13,6 +13,6 @@ public class IRCBot extends PircBot {
 
     @Override
     protected void onMessage(String channel, String sender, String login, String hostname, String message) {
-        Main.received(channel, sender, login, hostname, message);
+        Main.main.received(channel, sender, login, hostname, message);
     }
 }
