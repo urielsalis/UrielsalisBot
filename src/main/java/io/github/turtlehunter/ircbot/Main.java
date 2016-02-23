@@ -3,11 +3,16 @@ package io.github.turtlehunter.ircbot;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-import com.gargoylesoftware.htmlunit.*;
+import com.gargoylesoftware.htmlunit.BrowserVersion;
+import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.gargoylesoftware.htmlunit.javascript.background.JavaScriptJobManager;
+import io.github.turtlehunter.ircbot.Download;
+import io.github.turtlehunter.ircbot.Driver;
+import io.github.turtlehunter.ircbot.IRCBot;
 import org.apache.commons.logging.LogFactory;
 import org.jibble.pircbot.IrcException;
+
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -23,7 +28,7 @@ class Main
 {
     private ArrayList<String> devices = new ArrayList<>();
     private ArrayList<Driver> drivers = new ArrayList<>();
-    private HashMap<String, String>  notes = new HashMap<>();
+    private HashMap<String, String> notes = new HashMap<>();
     private String tempOS = "";
     private IRCBot ircBot;
     private Kryo kryo;
@@ -169,11 +174,7 @@ class Main
                 }
 
                 parseWebpage2(driver, page.getBody().asXml());
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (InterruptedException e) {
+            } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
             }
         }
@@ -238,10 +239,10 @@ class Main
         if(graphiccard.replaceAll("\\s+","").equals("intelhdgraphics")) return "Search in http://www.intel.com/content/www/us/en/support/graphics-drivers/000005538.html";
         for(Driver drv: drivers) {
             if(drv.name.toLowerCase().contains(graphiccard) || graphiccard.contains(drv.name.toLowerCase())) {
-                String result = "\u000304" + drv.url + "\u000f";
+                String result = ChatFormat.RED + drv.url + ChatFormat.NORMAL;
                 for(String str: notes.keySet()) {
                     if(str.contains(drv.name.toLowerCase()) || drv.name.toLowerCase().contains(str) || str.contains(drv.url.toLowerCase()) || drv.url.toLowerCase().contains(str)) {
-                        result += "\n\u000312" + notes.get(str) + "\u000F";
+                        result += "\n\u000312" + notes.get(str) + ChatFormat.NORMAL;
                     }
                 }
                 String exists = checkDrivers(drv, os);
@@ -249,24 +250,24 @@ class Main
                     for(Download down: drv.downloads) {
                         if (down.os.toLowerCase().contains(os.replace(" 32", "").replace(" 64", "")) && !down.url.toLowerCase().contains("inf") && !down.url.toLowerCase().contains("zip") && !down.version.toLowerCase().contains("previously released")) {
                             if (os.contains("32") && down.os.toLowerCase().contains("32") || os.contains("64") && down.os.toLowerCase().contains("64")) {
-                                result += "\n\u000307" + down.version + "\u000f for \u000307" + down.os + "\u000f - \u0002" + down.url + "\u000f";
+                                result += ChatFormat.OLIVE + down.version + ChatFormat.NORMAL + " for " + ChatFormat.OLIVE + down.os + ChatFormat.NORMAL + " - " + ChatFormat.BOLD + down.url + ChatFormat.NORMAL;
                                 for(String str: notes.keySet()) {
                                     if(str.contains(down.name.toLowerCase()) || down.name.toLowerCase().contains(str) || str.contains(down.url.toLowerCase()) || down.url.toLowerCase().contains(str)) {
-                                        result += "\n\u000312" + notes.get(str) + "\u000F";
+                                        result += ChatFormat.OLIVE + notes.get(str) + ChatFormat.NORMAL;
                                     }
                                 }
                             } else if ((!os.contains("64") || down.os.contains("64")) && (!os.contains("32") || down.os.contains("32"))) {
-                                result += "\n\u000307" + down.version + "\u000f for \u000307" + down.os + "\u000f - \u0002" + down.url + "\u000f";
+                                result += ChatFormat.OLIVE + down.version + ChatFormat.NORMAL + " for " + ChatFormat.OLIVE + down.os + ChatFormat.NORMAL + " - " + ChatFormat.BOLD + down.url + ChatFormat.NORMAL;
                                 for(String str: notes.keySet()) {
-                                    if(str.toLowerCase().contains(down.name.toLowerCase()) || down.name.toLowerCase().contains(str.toLowerCase()) || str.toLowerCase().contains(down.url.toLowerCase()) || down.url.toLowerCase().contains(str.toLowerCase())) {
-                                        result += "\n\u000312" + notes.get(str) + "\u000F";
+                                    if(str.contains(down.name.toLowerCase()) || down.name.toLowerCase().contains(str) || str.contains(down.url.toLowerCase()) || down.url.toLowerCase().contains(str)) {
+                                        result += ChatFormat.OLIVE + notes.get(str) + ChatFormat.NORMAL;
                                     }
                                 }
                             }
                         }
                     }
                 } else {
-                    return "\n\u000307" + exists + "\u000F";
+                    return ChatFormat.OLIVE + exists + ChatFormat.NORMAL;
                 }
                 return result;
             }
@@ -290,9 +291,9 @@ class Main
             case "!cleardatabase": {
                 File file = new File("save.bin");
                 file.delete();
-                ircBot.disconnect();
-                ircBot.dispose();
-                System.exit(0);
+                drivers.clear();
+                devices.clear();
+                loadOrDownload();
             }
             case "!clearnotes": {
                 File file = new File("notes.bin");
