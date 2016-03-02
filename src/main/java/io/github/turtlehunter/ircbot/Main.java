@@ -3,17 +3,16 @@ package io.github.turtlehunter.ircbot;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-import com.gargoylesoftware.htmlunit.BrowserVersion;
-import com.gargoylesoftware.htmlunit.WebClient;
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
-import com.gargoylesoftware.htmlunit.javascript.background.JavaScriptJobManager;
-import org.apache.commons.logging.LogFactory;
 import org.jibble.pircbot.IrcException;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 
 import java.io.*;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Scanner;
 
 /**
@@ -22,18 +21,18 @@ import java.util.Scanner;
 
 class Main
 {
-    private ArrayList<String> devices = new ArrayList<>();
+    private final ArrayList<String> devices = new ArrayList<>();
     private ArrayList<Driver> drivers = new ArrayList<>();
     private HashMap<String, String> notes = new HashMap<>();
     private String tempOS = "";
     private IRCBot ircBot;
     private Kryo kryo;
     public static Main main;
+    JSONParser parser = new JSONParser();
     String channel;
 
     public static void main(String[] args)
     {
-        LogFactory.getFactory().setAttribute("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog");
         main = new Main();
     }
 
@@ -147,30 +146,47 @@ class Main
     }
 
     private void getVersion() {
-        WebClient webClient = new WebClient(BrowserVersion.FIREFOX_38);
-        webClient.getOptions().setRedirectEnabled(true);
-        webClient.getOptions().setActiveXNative(false);
-        webClient.getOptions().setAppletEnabled(false);
-        webClient.getOptions().setThrowExceptionOnScriptError(false);
         for(String str: devices) {
             String strs[] = str.split(" ");
             String url = strs[0];
             String name = Util.join(strs);
             Driver driver = new Driver(name, url);
             try {
-
-                HtmlPage page = webClient.getPage(url);
-                JavaScriptJobManager manager = page.getEnclosingWindow().getJobManager();
-                while (manager.getJobCount() > 0) {
-                    if(manager.getJobCount()<=6) {
-                        manager.removeAllJobs();
-                        manager.shutdown();
+                URL url2 = new URL(url);
+                InputStream is2 = url2.openStream();  // throws an IOException
+                BufferedReader br2 = new BufferedReader(new InputStreamReader(is2));
+                String line;
+                while((line = br2.readLine()) != null) {
+                    if(line.contains("var epmid")) {
+                        String[] epmArray = line.trim().split("=");
+                        String epmid = epmArray[1].replaceAll("\"", "").replaceAll(";", "");
+                        URL url3 = new URL("https://downloadcenter.intel.com/json/pageresults?pageNumber=1&&productId="+epmid);
+                        System.out.println("https://downloadcenter.intel.com/json/pageresults?pageNumber=1&&productId="+epmid);
+                        InputStream is3 = url3.openStream();
+                        BufferedReader br3 = new BufferedReader(new InputStreamReader(is3));
+                        String json = br3.readLine(); //json is only 1 line
+                        System.out.println(json);
+                        br3.close();
+                        is3.close();
+                        /*
+                        Example here (warning, OS is wrong) using simple-json. Doesnt work btw but the thing is thee
+                        JSONObject obj = (JSONObject) parser.parse(json);
+                        JSONArray array = (JSONArray) obj.get("ResultsForDisplay");
+                        Iterator iterator = array.iterator();
+                        while (iterator.hasNext()) {
+                            JSONObject jsonObject = (JSONObject) iterator.next();
+                            String os = (String) jsonObject.get("OperatingSystems");
+                            String urlDown = "https://downloadcenter.intel.com"+ (String) jsonObject.get("FullDescriptionUrl");
+                            String nameDown = (String) jsonObject.get("Title");
+                            String version = (String) jsonObject.get("Version");
+                            driver.add(os, urlDown, nameDown, version);
+                        }*/
+                        break;
                     }
-                    Thread.sleep(1000);
                 }
-
-                parseDriver(driver, page.getBody().asXml());
-            } catch (IOException | InterruptedException e) {
+                br2.close();
+                is2.close();
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
