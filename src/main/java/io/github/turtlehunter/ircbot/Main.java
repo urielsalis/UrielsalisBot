@@ -168,24 +168,25 @@ class Main
                         System.out.println(json);
                         br3.close();
                         is3.close();
-                        /*
-                        Example here (warning, OS is wrong) using simple-json. Doesnt work btw but the thing is thee
+
                         JSONObject obj = (JSONObject) parser.parse(json);
                         JSONArray array = (JSONArray) obj.get("ResultsForDisplay");
-                        Iterator iterator = array.iterator();
-                        while (iterator.hasNext()) {
-                            JSONObject jsonObject = (JSONObject) iterator.next();
+                        for(int n = 0; n < array.size(); n++) {
+                            JSONObject jsonObject = (JSONObject) array.get(n);
                             String os = (String) jsonObject.get("OperatingSystems");
                             String urlDown = "https://downloadcenter.intel.com"+ (String) jsonObject.get("FullDescriptionUrl");
                             String nameDown = (String) jsonObject.get("Title");
                             String version = (String) jsonObject.get("Version");
+
                             driver.add(os, urlDown, nameDown, version);
-                        }*/
+                        }
+
                         break;
                     }
                 }
                 br2.close();
                 is2.close();
+                drivers.add(driver);
             } catch (Exception e) {
                 e.printStackTrace();
             }
