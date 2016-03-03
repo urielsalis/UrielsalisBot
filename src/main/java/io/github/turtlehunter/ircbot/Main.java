@@ -70,6 +70,7 @@ class Main
             }
 
             ircBot.sendMessage(channel, "Finished setting up. " + count + " drivers loaded");
+            save();
         }
     }
 
@@ -249,9 +250,11 @@ class Main
                                 }
                             }
                         }
+
                     }
+
                 } else {
-                    return ChatFormat.OLIVE + exists + ChatFormat.NORMAL;
+                    result = ChatFormat.OLIVE + exists + ChatFormat.NORMAL;
                 }
                 return result;
             }
@@ -387,6 +390,7 @@ class Main
         String higher = "Too old";
 
         for(Download download: driver.downloads) {
+            System.out.println(download.os);
             boolean bit642 = download.os.contains("64");
             if(bit64==bit642 && download.os.contains(windows)) return "true";
             if(download.os.contains("10")) higher = "10"; //bruteforce way but whatever
@@ -404,6 +408,7 @@ class Main
         String higher = "Too old";
 
         for(Download download: driver.downloads) {
+            System.out.println(download.os);
             if(download.os.contains("10")) higher = "10"; //bruteforce way but whatever
             else if(download.os.contains("8.1") && !higher.equals("10")) higher = "8.1";
             else if(download.os.contains("8") && !higher.equals("10") && !higher.equals("8.1")) higher = "8";
