@@ -32,6 +32,7 @@ class Main
     public static Main main;
     JSONParser parser = new JSONParser();
     String channel;
+    private boolean showed = false;
 
     public static void main(String[] args)
     {
@@ -232,50 +233,44 @@ class Main
                 }
                 String exists = checkDrivers(drv, os);
                 if(exists.equals("true")) {
-                    int version = higher(drv, os);
                     for(Download down: drv.downloads) {
-                        if(down.url.contains(String.valueOf(version))) {
                             if (down.os.toLowerCase().contains(os.replace(" 32", "").replace(" 64", "")) && !down.url.toLowerCase().contains("inf") && !down.url.toLowerCase().contains("zip") && !down.version.toLowerCase().contains("previously released")) {
                                 if (os.contains("32") && down.os.toLowerCase().contains("32") || os.contains("64") && down.os.toLowerCase().contains("64")) {
-                                    result += ChatFormat.OLIVE + down.version + ChatFormat.NORMAL + " for " + ChatFormat.OLIVE + down.os + ChatFormat.NORMAL + " - " + ChatFormat.BOLD + down.url + ChatFormat.NORMAL + "\n";
-                                    for (String str : notes.keySet()) {
-                                        if (str.contains(down.name.toLowerCase()) || down.name.toLowerCase().contains(str) || str.contains(down.url.toLowerCase()) || down.url.toLowerCase().contains(str)) {
-                                            result += ChatFormat.OLIVE + notes.get(str) + ChatFormat.NORMAL;
+                                    if(!showed) {
+                                        result += ChatFormat.OLIVE + down.version + ChatFormat.NORMAL + " for " + ChatFormat.OLIVE + down.os + ChatFormat.NORMAL + " - " + ChatFormat.BOLD + down.url + ChatFormat.NORMAL + "\n";
+                                        for (String str : notes.keySet()) {
+                                            if (str.contains(down.name.toLowerCase()) || down.name.toLowerCase().contains(str) || str.contains(down.url.toLowerCase()) || down.url.toLowerCase().contains(str)) {
+                                                result += ChatFormat.OLIVE + notes.get(str) + ChatFormat.NORMAL;
+                                            }
                                         }
+                                        showed = true;
                                     }
                                 } else if ((!os.contains("64") || down.os.contains("64")) && (!os.contains("32") || down.os.contains("32"))) {
-                                    result += ChatFormat.OLIVE + down.version + ChatFormat.NORMAL + " for " + ChatFormat.OLIVE + down.os + ChatFormat.NORMAL + " - " + ChatFormat.BOLD + down.url + ChatFormat.NORMAL + "\n";
-                                    for (String str : notes.keySet()) {
-                                        if (str.contains(down.name.toLowerCase()) || down.name.toLowerCase().contains(str) || str.contains(down.url.toLowerCase()) || down.url.toLowerCase().contains(str)) {
-                                            result += ChatFormat.OLIVE + notes.get(str) + ChatFormat.NORMAL;
+                                    if(!showed) {
+                                        result += ChatFormat.OLIVE + down.version + ChatFormat.NORMAL + " for " + ChatFormat.OLIVE + down.os + ChatFormat.NORMAL + " - " + ChatFormat.BOLD + down.url + ChatFormat.NORMAL + "\n";
+                                        for (String str : notes.keySet()) {
+                                            if (str.contains(down.name.toLowerCase()) || down.name.toLowerCase().contains(str) || str.contains(down.url.toLowerCase()) || down.url.toLowerCase().contains(str)) {
+                                                result += ChatFormat.OLIVE + notes.get(str) + ChatFormat.NORMAL;
+                                            }
                                         }
+                                        showed = true;
                                     }
                                 }
                             }
-                        }
+
 
                     }
 
                 } else {
                     result = ChatFormat.OLIVE + exists + ChatFormat.NORMAL;
                 }
+                showed = false;
                 return result;
             }
         }
         return "Not found";
     }
 
-    private int higher(Driver drv, String os) {
-        int higher = 0;
-        for(Download downloads: drv.downloads) {
-            String url = downloads.url;
-            int id = Integer.parseInt(url.split("/")[4]);
-            if(id > higher) {
-                higher = id;
-            }
-        }
-        return higher;
-    }
 
     public void received(String channel, String user, String login, String hostname, String message) {
         switch (message) {
@@ -330,115 +325,6 @@ class Main
                     sendMSG(channel, "GO TEAM RED!!\nSorry, not implemented yet");
                 } else {
                     sendMSG(channel, findDriver(driver, os));
-                }
-            case ".dx":
-                System.out.println(message);
-                String url = message.substring(3).trim();
-                System.out.println(url);
-                try {
-                    if (url.contains("paste.ubuntu.com")) {
-                        URL url1 = new URL(url);
-                        InputStream is = url1.openStream();  // throws an IOException
-                        BufferedReader br = new BufferedReader(new InputStreamReader(is));
-                        String line;
-                        String os3 = "";
-                        while ((line = br.readLine()) != null) {
-                            if(line.contains("Operating System")) {
-                                String tmp = line.substring(line.indexOf(":") + 1).trim();
-                                os3 = Util.removeEdition(tmp.split("\\(")[0]);
-                                if(tmp.contains("64")) {
-                                    os3 += " 64";
-                                } else {
-                                    os3 += " 32";
-                                }
-                            }
-                            if(line.contains("Processor: ")) {
-                                String processor = line.substring(line.indexOf(":") + 1).trim();
-                                processor = processor.split("@")[0].trim();
-                                boolean found = false;
-                                for (Driver drv2 : drivers) {
-                                    if (drv2.name.equals("CPU" + processor)) {
-                                        String result = "Found driver for CPU " + processor + " from " + drv2.url + " ";
-                                        String exists = checkDrivers(drv2, os3);
-                                        if(exists.equals("true")) {
-                                            for (Download download: drv2.downloads) {
-                                                if(download.os.contains(os3) || os3.contains(download.os)) {
-                                                    String result2 = findDriver("CPU"+processor, os3);
-                                                    if (!result2.equals("Not found")) sendMSG(channel, result + result2);
-                                                }
-                                            }
-                                        } else {
-                                            result += exists;
-                                        }
-                                        sendMSG(channel, result);
-                                        found = true;
-                                        break;
-                                    }
-                                }
-                                if (!found) {
-                                    URL url2 = new URL("http://ajax.googleapis.com/ajax/services/search/web?v=1.0&q=" + URLEncoder.encode(processor, "UTF-8"));
-                                    InputStream is2 = url2.openStream();  // throws an IOException
-                                    BufferedReader br2 = new BufferedReader(new InputStreamReader(is2));
-                                    String json = br2.readLine(); //json is only one line
-                                    JSONObject jsonObject = (JSONObject) parser.parse(json);
-                                    JSONObject jsonObject1 = (JSONObject) jsonObject.get("responseData");
-                                    JSONArray array = (JSONArray) jsonObject1.get("results");
-                                    for (int i = 0; i < array.size(); i++) {
-                                        JSONObject obj = (JSONObject) array.get(i);
-                                        if (((String) obj.get("url")).contains("ark.intel.com")) {
-                                            String[] strs = ((String) obj.get("url")).split("/");
-                                            for (String str : strs) {
-                                                if (Util.isInteger(str)) {
-                                                    String epmid = str;
-                                                    URL url3 = new URL("https://downloadcenter.intel.com/json/pageresults?pageNumber=1&&productId=" + epmid);
-                                                    InputStream is3 = url3.openStream();
-                                                    BufferedReader br3 = new BufferedReader(new InputStreamReader(is3));
-                                                    String json2 = br3.readLine(); //json is only 1 line
-                                                    br3.close();
-                                                    is3.close();
-
-                                                    JSONObject obj2 = (JSONObject) parser.parse(json);
-                                                    JSONArray array2 = (JSONArray) obj2.get("ResultsForDisplay");
-                                                    Driver driver2 = new Driver("CPU" + processor, (String) obj.get("url"));
-                                                    for (int n = 0; n < array2.size(); n++) {
-                                                        JSONObject jsonObject2 = (JSONObject) array2.get(n);
-                                                        String os2 = (String) jsonObject2.get("OperatingSystems");
-                                                        String urlDown = "https://downloadcenter.intel.com" + (String) jsonObject2.get("FullDescriptionUrl");
-                                                        String nameDown = (String) jsonObject2.get("Title");
-                                                        String version = (String) jsonObject2.get("Version");
-
-                                                        driver2.add(os2, urlDown, nameDown, version);
-                                                    }
-                                                    drivers.add(driver2);
-                                                    save();
-                                                    String result = "Found driver for CPU " + processor + " from " + driver2.url + " ";
-                                                    String exists = checkDrivers(driver2, os3);
-                                                    if (exists.equals("true")) {
-                                                        for (Download download : driver2.downloads) {
-                                                            if (download.os.contains(os3) || os3.contains(download.os)) {
-                                                                String result2 = findDriver("CPU" + processor, os3);
-                                                                if (!result2.equals("Not found"))
-                                                                    sendMSG(channel, result + result2);
-                                                            }
-                                                        }
-                                                    } else {
-                                                        result += exists;
-                                                    }
-                                                    sendMSG(channel, result);
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        br.close();
-                        is.close();
-
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
                 }
 
         }
