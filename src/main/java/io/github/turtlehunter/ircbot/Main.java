@@ -196,33 +196,10 @@ class Main
         }
     }
 
-    private void parseDriver(Driver driver, String body) {
-        System.out.print("Parsing " + driver.name + " " + driver.url);
-        String str[] = body.split("\n");
-        boolean save = false;
-        for (int i = 0; i < str.length; i++) {
-            if(save) {
-                if(str[i].contains("a data-wap_ref")) {
-                    String url = str[i].substring(str[i].indexOf("ng-href")+9, str[i].indexOf("\"", str[i].indexOf("ng-href")+9)).trim();
-                    String name = str[i+1].trim();
-                    String version = str[i+14].trim();
-                    String os = str[i+20].trim().replace("®", "").replace("™", "");
-                    driver.add(os, url, name, version);
-                    drivers.add(driver);
-                    i += 20;
-                } else if(str[i].contains("container show-more-container show")) {
-                    save = false;
-                }
-            } else {
-                if(str[i].contains("<!-- ngRepeat: item in downloadResult | limitTo:10 -->")) save = true;
-            }
-        }
-        System.out.println(" Found " + driver.downloads.size() + " drivers");
-    }
-
     public String findDriver(String graphiccard, String os) {
         graphiccard = graphiccard.toLowerCase().replace("(r)", "");
         os = os.toLowerCase();
+        showed = false;
         for(Driver drv: drivers) {
             if(drv.name.toLowerCase().contains(graphiccard) || graphiccard.contains(drv.name.toLowerCase())) {
                 String result = ChatFormat.RED + drv.url + ChatFormat.NORMAL + "\n";
@@ -264,7 +241,6 @@ class Main
                 } else {
                     result = ChatFormat.OLIVE + exists + ChatFormat.NORMAL;
                 }
-                showed = false;
                 return result;
             }
         }
