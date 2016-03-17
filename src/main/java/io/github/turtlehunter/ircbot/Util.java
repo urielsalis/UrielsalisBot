@@ -16,7 +16,7 @@ public class Util {
         String[] strs = replace.split(" ");
         String result = "";
         for(String str: strs) {
-            if(str.equals("Windows") || isInteger(str) || str.equals("8.1") || str.equals("XP")) result += str + " ";
+            if(str.toLowerCase().equals("windows") || isInteger(str) || str.equals("8.1") || str.toLowerCase().equals("xp") || str.toLowerCase().equals("vista")) result += str + " ";
         }
         return result.substring(0, result.length()-1);
     }

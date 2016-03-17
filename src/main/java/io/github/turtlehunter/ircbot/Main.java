@@ -7,14 +7,12 @@ import org.jibble.pircbot.IrcException;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 import java.io.*;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Scanner;
 
 /**
@@ -23,7 +21,6 @@ import java.util.Scanner;
 
 class Main
 {
-    private final ArrayList<String> devices = new ArrayList<>();
     private ArrayList<Driver> drivers = new ArrayList<>();
     private HashMap<String, String> notes = new HashMap<>();
     private String tempOS = "";
@@ -32,7 +29,6 @@ class Main
     public static Main main;
     JSONParser parser = new JSONParser();
     String channel;
-    private boolean showed = false;
 
     public static void main(String[] args)
     {
@@ -60,7 +56,6 @@ class Main
         } else {
             ircBot.sendMessage(channel, "UrielsalisBot V1.1. Downloading Intel database, this might(will) take a while");
             updateDatabase();
-            getVersion();
 
             int count = 0;
             for(Driver dri: drivers) {
@@ -98,33 +93,47 @@ class Main
         InputStream is = null;
         BufferedReader br;
         String line;
-        boolean startCopying = false;
-        boolean firstTRSkipped = false;
-        boolean copyNext = false;
 
         //Intel
 
         try {
-            url = new URL("http://www.intel.com/content/www/us/en/support/graphics-drivers/000005526.html");
+            url = new URL("http://www.intel.com/content/www/us/en/support/graphics-drivers.html");
             is = url.openStream();  // throws an IOException
             br = new BufferedReader(new InputStreamReader(is));
 
             while ((line = br.readLine()) != null) {
-                if(startCopying) {
-                    if(copyNext) {
-                        if(line.contains("href")) devices.add(line.trim().substring(48).replaceAll("&reg;", "").replaceAll("&trade;", "").replaceAll("</a></td>", "").replaceAll("\">", " "));
-                        copyNext = false;
-                    }
-                    if(line.contains("<tr>")) {
-                        if(!firstTRSkipped) firstTRSkipped = true; else copyNext = true;
-                    }
-                    if(line.contains("</tbody>")) {
-                        firstTRSkipped = false;
-                        startCopying = false;
-                    }
-                } else {
-                    if (line.contains("<a name=\"core\"></a>") || line.contains("<a name=\"pentium\"></a>") || line.contains("<a name=\"celeron\"></a>") || line.contains("<a name=\"atom\"></a>") || line.contains("<a name=\"legacy\"></a>")) {
-                        startCopying = true;
+                if(line.contains("var familyProduct")) {
+                    String str = line.replace("var familyProduct = '[", "").replace("]';", "").trim();
+                    try {
+                        JSONObject obj = (JSONObject) new JSONParser().parse(str);
+                        JSONArray array = (JSONArray) obj.get("productFamily");
+                        for(Object o: array) {
+                            JSONObject tmp = (JSONObject) o;
+                            Driver driver = new Driver(((String) tmp.get("displayName")).replace("®", "").replace("™", ""), "http://www.intel.com/content/www/us/en/support/graphics-drivers/"+ tmp.get("shortname") +".html");
+
+                            URL url3 = new URL("https://downloadcenter.intel.com/json/pageresults?pageNumber=1&&productId="+tmp.get("epmid"));
+                            InputStream is3 = url3.openStream();
+                            BufferedReader br3 = new BufferedReader(new InputStreamReader(is3));
+                            String json = br3.readLine(); //json is only 1 line
+                            System.out.println(json);
+                            br3.close();
+                            is3.close();
+
+                            JSONObject obj2 = (JSONObject) parser.parse(json);
+                            JSONArray array2 = (JSONArray) obj2.get("ResultsForDisplay");
+                            for(int n = 0; n < array2.size(); n++) {
+                                JSONObject jsonObject = (JSONObject) array2.get(n);
+                                String os = (String) jsonObject.get("OperatingSystems");
+                                String urlDown = "https://downloadcenter.intel.com"+ (String) jsonObject.get("FullDescriptionUrl");
+                                String nameDown = (String) jsonObject.get("Title");
+                                String version = (String) jsonObject.get("Version");
+
+                                driver.add(os, urlDown, nameDown, version);
+                            }
+                            drivers.add(driver);
+                        }
+                    } catch (ParseException e) {
+                        e.printStackTrace();
                     }
                 }
             }
@@ -139,112 +148,61 @@ class Main
             }
         }
 
-        //AMD
-
-
-        for(String str: devices) {
-            System.out.println(str);
-        }
-
-
     }
 
-    private void getVersion() {
-        for(String str: devices) {
-            String strs[] = str.split(" ");
-            String url = strs[0];
-            String name = Util.join(strs);
-            Driver driver = new Driver(name, url);
-            try {
-                URL url2 = new URL(url);
-                InputStream is2 = url2.openStream();  // throws an IOException
-                BufferedReader br2 = new BufferedReader(new InputStreamReader(is2));
-                String line;
-                while((line = br2.readLine()) != null) {
-                    if(line.contains("var epmid")) {
-                        String[] epmArray = line.trim().split("=");
-                        String epmid = epmArray[1].replaceAll("\"", "").replaceAll(";", "");
-                        URL url3 = new URL("https://downloadcenter.intel.com/json/pageresults?pageNumber=1&&productId="+epmid);
-                        InputStream is3 = url3.openStream();
-                        BufferedReader br3 = new BufferedReader(new InputStreamReader(is3));
-                        String json = br3.readLine(); //json is only 1 line
-                        System.out.println(json);
-                        br3.close();
-                        is3.close();
-
-                        JSONObject obj = (JSONObject) parser.parse(json);
-                        JSONArray array = (JSONArray) obj.get("ResultsForDisplay");
-                        for(int n = 0; n < array.size(); n++) {
-                            JSONObject jsonObject = (JSONObject) array.get(n);
-                            String os = (String) jsonObject.get("OperatingSystems");
-                            String urlDown = "https://downloadcenter.intel.com"+ (String) jsonObject.get("FullDescriptionUrl");
-                            String nameDown = (String) jsonObject.get("Title");
-                            String version = (String) jsonObject.get("Version");
-
-                            driver.add(os, urlDown, nameDown, version);
-                        }
-
-                        break;
-                    }
-                }
-                br2.close();
-                is2.close();
-                drivers.add(driver);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
 
     public String findDriver(String graphiccard, String os) {
         graphiccard = graphiccard.toLowerCase().replace("(r)", "");
         os = os.toLowerCase();
-        showed = false;
+        graphiccard = format(graphiccard);
+        int showed = 0;
+        String result = "Not found";
         for(Driver drv: drivers) {
-            if(drv.name.toLowerCase().contains(graphiccard) || graphiccard.contains(drv.name.toLowerCase())) {
-                String result = ChatFormat.RED + drv.url + ChatFormat.NORMAL + "\n";
-                for(String str: notes.keySet()) {
-                    if(str.contains(drv.name.toLowerCase()) || drv.name.toLowerCase().contains(str) || str.contains(drv.url.toLowerCase()) || drv.url.toLowerCase().contains(str)) {
+
+            String lowdrv = drv.name.toLowerCase();
+            System.out.println(lowdrv + " " + graphiccard);
+            if(lowdrv.contains(graphiccard) || graphiccard.contains(lowdrv)) {
+                result = ChatFormat.RED + drv.url + ChatFormat.NORMAL + "\n";
+                for (String str : notes.keySet()) {
+                    if (str.contains(drv.name.toLowerCase()) || drv.name.toLowerCase().contains(str) || str.contains(drv.url.toLowerCase()) || drv.url.toLowerCase().contains(str)) {
                         result += "\n\u000312" + notes.get(str) + ChatFormat.NORMAL;
                     }
                 }
                 String exists = checkDrivers(drv, os);
-                if(exists.equals("true")) {
-                    for(Download down: drv.downloads) {
-                            if (down.os.toLowerCase().contains(os.replace(" 32", "").replace(" 64", "")) && !down.url.toLowerCase().contains("inf") && !down.url.toLowerCase().contains("zip") && !down.version.toLowerCase().contains("previously released")) {
-                                if (os.contains("32") && down.os.toLowerCase().contains("32") || os.contains("64") && down.os.toLowerCase().contains("64")) {
-                                    if(!showed) {
-                                        result += ChatFormat.OLIVE + down.version + ChatFormat.NORMAL + " for " + ChatFormat.OLIVE + down.os + ChatFormat.NORMAL + " - " + ChatFormat.BOLD + down.url + ChatFormat.NORMAL + "\n";
-                                        for (String str : notes.keySet()) {
-                                            if (str.contains(down.name.toLowerCase()) || down.name.toLowerCase().contains(str) || str.contains(down.url.toLowerCase()) || down.url.toLowerCase().contains(str)) {
-                                                result += ChatFormat.OLIVE + notes.get(str) + ChatFormat.NORMAL;
-                                            }
+                System.out.println(exists);
+                if (exists.equals("true")) {
+                    for (Download down : drv.downloads) {
+                        String drvos = down.os.toLowerCase();
+                        if (os.contains(Util.removeEdition(drvos).split(" ")[1])) {
+                            if ((os.contains("32") && drvos.contains("32")) || (!os.contains("64") && !os.contains("64"))) {
+                                if (showed < 2) {
+                                    result += ChatFormat.OLIVE + down.version + ChatFormat.NORMAL + " for " + ChatFormat.OLIVE + down.os + ChatFormat.NORMAL + " - " + ChatFormat.BOLD + down.url + ChatFormat.NORMAL + "\n";
+                                    for (String str : notes.keySet()) {
+                                        if (str.contains(down.name.toLowerCase()) || down.name.toLowerCase().contains(str) || str.contains(down.url.toLowerCase()) || down.url.toLowerCase().contains(str)) {
+                                            result += ChatFormat.OLIVE + notes.get(str) + ChatFormat.NORMAL;
                                         }
-                                        showed = true;
                                     }
-                                } else if ((!os.contains("64") || down.os.contains("64")) && (!os.contains("32") || down.os.contains("32"))) {
-                                    if(!showed) {
-                                        result += ChatFormat.OLIVE + down.version + ChatFormat.NORMAL + " for " + ChatFormat.OLIVE + down.os + ChatFormat.NORMAL + " - " + ChatFormat.BOLD + down.url + ChatFormat.NORMAL + "\n";
-                                        for (String str : notes.keySet()) {
-                                            if (str.contains(down.name.toLowerCase()) || down.name.toLowerCase().contains(str) || str.contains(down.url.toLowerCase()) || down.url.toLowerCase().contains(str)) {
-                                                result += ChatFormat.OLIVE + notes.get(str) + ChatFormat.NORMAL;
-                                            }
+                                    showed++;
+                                }
+                            } else if (os.contains("64") && drvos.contains("64")) {
+                                if (showed < 2) {
+                                    result += ChatFormat.OLIVE + down.version + ChatFormat.NORMAL + " for " + ChatFormat.OLIVE + down.os + ChatFormat.NORMAL + " - " + ChatFormat.BOLD + down.url + ChatFormat.NORMAL + "\n";
+                                    for (String str : notes.keySet()) {
+                                        if (str.contains(down.name.toLowerCase()) || down.name.toLowerCase().contains(str) || str.contains(down.url.toLowerCase()) || down.url.toLowerCase().contains(str)) {
+                                            result += ChatFormat.OLIVE + notes.get(str) + ChatFormat.NORMAL;
                                         }
-                                        showed = true;
                                     }
+                                    showed++;
                                 }
                             }
-
-
+                        }
                     }
-
                 } else {
-                    result = ChatFormat.OLIVE + exists + ChatFormat.NORMAL;
+                    result += exists;
                 }
-                return result;
             }
         }
-        return "Not found";
+        return result;
     }
 
 
@@ -261,7 +219,6 @@ class Main
                 File file = new File("save.bin");
                 file.delete();
                 drivers.clear();
-                devices.clear();
                 loadOrDownload();
             }
             case "!clearnotes": {
@@ -327,21 +284,26 @@ class Main
                 if (data[3].contains("not find card")) return;
                 String tmp = data[3].replace("(R)", "");
                 String graphics = filter(tmp.substring(tmp.indexOf("(") + 1, tmp.indexOf(")")).replace("(R)", "").replace("Family", "").replace("-Chipsatzfamilie", ""));
-                if (graphics.contains("45 Express Chipset")) graphics = "4 Series";
-                if (graphics.contains("/")) {
-                    String words[] = graphics.split(" ");
-                    StringBuilder builder = new StringBuilder();
-                    for (String str : words) {
-                        builder.append(str.contains("/") ? str.split("/")[0] + " " : str + " ");
-                    }
-                    graphics = builder.toString();
-                }
+                graphics = format(graphics);
                 System.out.println(os2 + "-" + graphics);
                 String str2 = findDriver(graphics, os2);
                 System.out.println(str2);
                 if (!str2.equals("Not found")) sendMSG(channel, str2);
             }
         }
+    }
+
+    private String format(String graphiccard) {
+        if (graphiccard.contains("45 Express Chipset")) graphiccard = "4 Series";
+        if (graphiccard.contains("/")) {
+            String words[] = graphiccard.split(" ");
+            StringBuilder builder = new StringBuilder();
+            for (String str : words) {
+                builder.append(str.contains("/") ? str.split("/")[0] + " " : str + " ");
+            }
+            graphiccard = builder.toString();
+        }
+        return graphiccard;
     }
 
 
@@ -378,6 +340,7 @@ class Main
 
     public String checkDrivers(Driver driver, String os) {
         boolean bit64 = os.contains("64");
+        System.out.println(os);
         String windows = os.split(" ")[1];
         String higher = "Too old";
 
