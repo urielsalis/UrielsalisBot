@@ -155,12 +155,11 @@ class Main
         graphiccard = graphiccard.toLowerCase().replace("(r)", "");
         os = os.toLowerCase();
         graphiccard = format(graphiccard);
-        int showed = 0;
+        boolean showed = false;
         String result = "Not found";
         for(Driver drv: drivers) {
 
             String lowdrv = drv.name.toLowerCase();
-            System.out.println(lowdrv + " " + graphiccard);
             if(lowdrv.contains(graphiccard) || graphiccard.contains(lowdrv)) {
                 result = ChatFormat.RED + drv.url + ChatFormat.NORMAL + "\n";
                 for (String str : notes.keySet()) {
@@ -175,24 +174,24 @@ class Main
                         String drvos = down.os.toLowerCase();
                         if (os.contains(Util.removeEdition(drvos).split(" ")[1])) {
                             if ((os.contains("32") && drvos.contains("32")) || (!os.contains("64") && !os.contains("64"))) {
-                                if (showed < 2) {
+                                if (!showed) {
                                     result += ChatFormat.OLIVE + down.version + ChatFormat.NORMAL + " for " + ChatFormat.OLIVE + down.os + ChatFormat.NORMAL + " - " + ChatFormat.BOLD + down.url + ChatFormat.NORMAL + "\n";
                                     for (String str : notes.keySet()) {
                                         if (str.contains(down.name.toLowerCase()) || down.name.toLowerCase().contains(str) || str.contains(down.url.toLowerCase()) || down.url.toLowerCase().contains(str)) {
                                             result += ChatFormat.OLIVE + notes.get(str) + ChatFormat.NORMAL;
                                         }
                                     }
-                                    showed++;
+                                    showed = true;
                                 }
                             } else if (os.contains("64") && drvos.contains("64")) {
-                                if (showed < 2) {
+                                if (!showed) {
                                     result += ChatFormat.OLIVE + down.version + ChatFormat.NORMAL + " for " + ChatFormat.OLIVE + down.os + ChatFormat.NORMAL + " - " + ChatFormat.BOLD + down.url + ChatFormat.NORMAL + "\n";
                                     for (String str : notes.keySet()) {
                                         if (str.contains(down.name.toLowerCase()) || down.name.toLowerCase().contains(str) || str.contains(down.url.toLowerCase()) || down.url.toLowerCase().contains(str)) {
                                             result += ChatFormat.OLIVE + notes.get(str) + ChatFormat.NORMAL;
                                         }
                                     }
-                                    showed++;
+                                    showed = true;
                                 }
                             }
                         }
@@ -356,7 +355,7 @@ class Main
             else if(download.os.contains("XP") && !higher.equals("10") && !higher.equals("8.1")&& !higher.equals("8")&& !higher.equals("7") && !higher.equals("Vista")) higher = "XP";
             else if(download.os.contains("2000") && !higher.equals("10") && !higher.equals("8.1")&& !higher.equals("8")&& !higher.equals("7") && !higher.equals("Vista") && !higher.equals("XP")) higher = "2000";
         }
-        return "No drivers for Windows "+windows+". Latest is Windows "+higher;
+        return bit64 ? "No drivers for Windows " + windows + " x64. Latest is Windows " + higher : "No drivers for Windows " + windows + ". Latest is Windows " + higher;
     }
 
     public String checkDrivers(Driver driver) {
