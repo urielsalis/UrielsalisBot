@@ -3,6 +3,9 @@ package io.github.turtlehunter.ircbot;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+import me.urielsalis.IRCApi.EventManager;
+import me.urielsalis.IRCApi.IRCApi;
+import me.urielsalis.IRCApi.events.*;
 import org.jibble.pircbot.IrcException;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -21,14 +24,14 @@ import java.util.Scanner;
 
 class Main
 {
-    private ArrayList<Driver> drivers = new ArrayList<>();
-    private HashMap<String, String> notes = new HashMap<>();
-    private String tempOS = "";
-    private IRCBot ircBot;
+    public ArrayList<Driver> drivers = new ArrayList<>();
+    public HashMap<String, String> notes = new HashMap<>();
+    public String tempOS = "";
+    public IRCApi irc;
     private Kryo kryo;
     public static Main main;
     JSONParser parser = new JSONParser();
-    String channel;
+    ArrayList<String> channel = new ArrayList<>();
 
     public static void main(String[] args)
     {
@@ -40,7 +43,7 @@ class Main
         loadOrDownload();
     }
 
-    private void loadOrDownload() {
+    public void loadOrDownload() {
         kryo = new Kryo();
         if(new File("save.bin").exists()) {
             try {
@@ -54,7 +57,7 @@ class Main
                 e.printStackTrace();
             }
         } else {
-            ircBot.sendMessage(channel, "UrielsalisBot V1.1. Downloading Intel database, this might(will) take a while");
+            send("UrielsalisBot V1.1. Downloading Intel database, this might(will) take a while");
             updateDatabase();
 
             int count = 0;
@@ -67,25 +70,45 @@ class Main
                 System.out.println();
             }
 
-            ircBot.sendMessage(channel, "Finished setting up. " + count + " drivers loaded");
+            send("Finished setting up. " + count + " drivers loaded");
             save();
         }
     }
 
-    private void initBot() {
+    private void send(String s) {
+        for(String str: channel) {
+            irc.send(str, s);
+        }
+    }
+
+    public void initBot() {
+        irc = new IRCApi();
+
+        new Thread(){
+            @Override
+            public void run() {
+                irc.init("irc.esper.net", 6667, "" , "UrielsalisBot", "UrielsalisBot", "UrielsalisBot", false);
+                irc.start();
+            }
+        }.start();
         try {
-            channel = new Scanner(new File("channel.txt")).useDelimiter("\\Z").next();
-        } catch (FileNotFoundException e) {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        ircBot = new IRCBot();
-        try {
-            ircBot.connect("irc.esper.net");
-        } catch (IOException | IrcException e) {
-            e.printStackTrace();
-        }
-        System.out.println("Connected: " + ircBot.isConnected());
-        ircBot.joinChannel(channel);
+
+        System.out.println("Reflection Start...");
+        EventManager.commandPrefix = "!";
+        EventManager.addClass(Listeners.class);
+        System.out.println("Loading Complete!");
+        //init done
+        System.out.println("Is connected: " + irc.isConnected());
+    }
+
+    public void joinChannel(String channel) {
+        if(channel == null) System.out.println("null");
+        irc.join(channel);
+        System.out.println("Joined Channel " + channel);
     }
 
     private void updateDatabase() {
@@ -171,6 +194,9 @@ class Main
                 System.out.println(exists);
                 if (exists.equals("true")) {
                     for (Download down : drv.downloads) {
+                        if(drv.name.toLowerCase().contains("inf")) {
+                            continue;
+                        }
                         String drvos = down.os.toLowerCase();
                         if (os.contains(Util.removeEdition(drvos).split(" ")[1])) {
                             if ((os.contains("32") && drvos.contains("32")) || (!os.contains("64") && !os.contains("64"))) {
@@ -204,95 +230,7 @@ class Main
         return result;
     }
 
-
-    public void received(String channel, String user, String login, String hostname, String message) {
-        switch (message) {
-            case "!quit":
-                save();
-                System.out.println("Quit");
-                ircBot.disconnect();
-                ircBot.dispose();
-                System.exit(0);
-
-            case "!cleardatabase": {
-                File file = new File("save.bin");
-                file.delete();
-                drivers.clear();
-                loadOrDownload();
-            }
-            case "!clearnotes": {
-                File file = new File("notes.bin");
-                file.delete();
-                notes = new HashMap<>();
-                break;
-            }
-            case ".!help":
-                sendMSG(channel, "!quit Quits, !cleardatabase Clears the database, !clearnotes Clears the notes, !add <pattern> Note <note> Adds a note, !getDriver <pattern> Windows <os> [32/64] Gets info of pattern from OS, !getDrivers sames a !getDriver, !getOS <driver> Get latest version of driver");
-                break;
-        }
-        String command = message.substring(0, message.indexOf(" "));
-        String driver = "";
-        String os = "";
-        System.out.println(message);
-        if (!command.equals("!add") && !command.equals("!getOS") && !command.equals(".dx")) {
-            driver = message.substring(message.indexOf(" ") + 1, message.indexOf("Windows") - 1);
-            os = message.substring(message.indexOf("Windows"));
-        }
-        switch (command) {
-            case "!add":
-                notes.put(message.substring(message.indexOf(" ") + 1, message.indexOf(" Note ") - 1), message.substring(message.indexOf(" Note ") + 6));
-            case "!getOS":
-                String drv = message.substring(7).toLowerCase();
-                System.out.println(drv);
-                for (Driver d : drivers) {
-                    if (d.name.toLowerCase().contains(drv) || drv.contains(d.name.toLowerCase())) {
-                        sendMSG(channel, "Latest is Windows " + checkDrivers(d) + " from Driver at " + d.url);
-                        break;
-                    }
-                }
-            case "!getDriver":
-                if (message.toLowerCase().contains("nvidia")) {
-                    sendMSG(channel, "GO TEAM GREEN!!\nSorry, not implemented yet");
-                } else if (message.toLowerCase().contains("amd")) {
-                    sendMSG(channel, "GO TEAM RED!!\nSorry, not implemented yet");
-                } else {
-                    sendMSG(channel, findDriver(driver, os));
-                }
-
-        }
-
-        if (user.equals("PangeaBot") || user.equals("urielsalis")) {
-            //<PangeaBot> (webrosc) n/a | n/a | Windows 7 Professional 64-bit | Enum\PCI\VEN_8086&DEV_29B2&SUBSYS_02111028&REV_02 (Intel(R) Q35 Express Chipset Family)
-            if (message.contains("Graphics card")) {
-                String str[] = message.split(", ");
-                for (String stR : str) System.out.print(stR + "-");
-                String graphics = null;
-                if (str[1].contains("HD") || str[1].contains("Graphics")) graphics = str[1];
-                if (str[2].contains("HD") || str[2].contains("Graphics")) graphics = str[2];
-                if (str[3].contains("HD") || str[3].contains("Graphics")) graphics = str[3];
-                if (graphics != null) {
-                    String str2 = findDriver(graphics, tempOS);
-                    if (!str2.equals("Not found")) sendMSG(channel, str2);
-                }
-            } else {
-                String data[] = message.split("\\|");
-                String os2 = Util.removeEdition(data[2].replace("-bit", "")).replace(" 64", "").replace(" 32", "");
-                if (data[2].contains("32")) os2 += " 32";
-                else if (data[2].contains("64")) os2 += " 64";
-                tempOS = os2;
-                if (data[3].contains("not find card")) return;
-                String tmp = data[3].replace("(R)", "");
-                String graphics = filter(tmp.substring(tmp.indexOf("(") + 1, tmp.indexOf(")")).replace("(R)", "").replace("Family", "").replace("-Chipsatzfamilie", ""));
-                graphics = format(graphics);
-                System.out.println(os2 + "-" + graphics);
-                String str2 = findDriver(graphics, os2);
-                System.out.println(str2);
-                if (!str2.equals("Not found")) sendMSG(channel, str2);
-            }
-        }
-    }
-
-    private String format(String graphiccard) {
+    public String format(String graphiccard) {
         if (graphiccard.contains("45 Express Chipset")) graphiccard = "4 Series";
         if (graphiccard.contains("/")) {
             String words[] = graphiccard.split(" ");
@@ -319,7 +257,7 @@ class Main
         }
     }
 
-    public String filter(String family) {
+    public static String filter(String family) {
         String str[] = family.split(" ");
         String result = "";
         for(String stri: str) {
@@ -334,10 +272,13 @@ class Main
 
     public void sendMSG(String channel, String str) {
         String strs[] = str.split("\n");
-        for(String str2: strs) ircBot.sendMessage(channel, str2);
+        System.out.println(channel);
+        for(String str2: strs) {
+            irc.send(channel, str2);
+        }
     }
 
-    public String checkDrivers(Driver driver, String os) {
+    public static String checkDrivers(Driver driver, String os) {
         boolean bit64 = os.contains("64");
         System.out.println(os);
         String windows = os.split(" ")[1];
@@ -358,7 +299,7 @@ class Main
         return bit64 ? "No drivers for Windows " + windows + " x64. Latest is Windows " + higher : "No drivers for Windows " + windows + ". Latest is Windows " + higher;
     }
 
-    public String checkDrivers(Driver driver) {
+    public static String checkDrivers(Driver driver) {
         String higher = "Too old";
 
         for(Download download: driver.downloads) {
@@ -373,5 +314,6 @@ class Main
         }
         return "Latest is Windows "+higher;
     }
+
 }
 
