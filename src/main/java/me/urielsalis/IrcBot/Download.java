@@ -1,7 +1,7 @@
-package io.github.turtlehunter.ircbot;
+package me.urielsalis.IrcBot;
 
 /**
- * turtlehunter.github.IRCBot - uriel IRCBot 21/2/2016
+ * @author Uriel Salischiker
  */
 public class Download {
     public String os;

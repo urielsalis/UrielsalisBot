@@ -1,10 +1,15 @@
-package io.github.turtlehunter.ircbot;
+package me.urielsalis.IrcBot;
 
 
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+/**
+ * Class with IRC color codes
+ *
+ * @author Lord Ralex
+ */
 public enum ChatFormat {
 
     NORMAL("\u000f", Style.RESET),

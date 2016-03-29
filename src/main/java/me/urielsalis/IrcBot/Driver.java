@@ -1,9 +1,9 @@
-package io.github.turtlehunter.ircbot;
+package me.urielsalis.IrcBot;
 
 import java.util.ArrayList;
 
 /**
- * turtlehunter.github.IRCBot - uriel IRCBot 21/2/2016
+ * @author Uriel Salischiker
  */
 public class Driver {
     public String name;
