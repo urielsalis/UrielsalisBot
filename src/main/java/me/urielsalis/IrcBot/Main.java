@@ -3,23 +3,24 @@ package me.urielsalis.IrcBot;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+import com.google.gson.Gson;
 import me.urielsalis.IRCApi.EventManager;
 import me.urielsalis.IRCApi.IRCApi;
 import me.urielsalis.IRCApi.events.Event;
 import me.urielsalis.IRCApi.events.OnPrivmsg;
+import org.json.XML;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import java.io.*;
+import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 
 /**
  * Main class
@@ -37,6 +38,7 @@ public class Main {
     public JSONParser parser = new JSONParser();
     public String tempOS;
     int count = 0;
+    public String cpu;
 
 
 
@@ -150,6 +152,10 @@ public class Main {
             downloadIntel();
             save();
         }
+
+    }
+
+    private void downloadArk() {
 
     }
 
@@ -331,22 +337,175 @@ public class Main {
 
     public String findDriver(String driver, String os) {
         driver = driver.trim();
-        os = os.trim();
+        if(driver.equals("Intel HD Graphics")) {
+            //ark.intel.com
+            try {
+                URL url = new URL("http://ajax.googleapis.com/ajax/services/search/web?v=1.0&q=" + URLEncoder.encode(cpu, "UTF-8"));
+                Reader reader = new InputStreamReader(url.openStream(), "UTF-8");
+                GoogleResults results = new Gson().fromJson(reader, GoogleResults.class);
+                GoogleResults.Result result = results.getResponseData().getResults().get(0);
+                if(result.getUrl().contains("ark.intel.com")) {
+                    URL url2 = new URL("http://ark.intel.com/compare/" +getEpmID(result.getUrl()) + "?e=t");
+                    String graphicscard = "";
+                    String family = "";
+                    Scanner scanner = new Scanner(url2.openStream(), "UTF-8");
+                    scanner.useDelimiter("\\A");
+                    String xmldata = scanner.next();
+                    scanner.close();
+
+                    org.json.JSONObject soapDatainJsonObject = XML.toJSONObject(xmldata);
+                    String json = soapDatainJsonObject.toString().replace("ss:", "");
+                    try {
+                        JSONObject object = (JSONObject) parser.parse(json);
+                        JSONObject workbook = (JSONObject) (object.get("Workbook"));
+                        JSONObject workSheet = (JSONObject) workbook.get("Worksheet");
+                        JSONObject table = (JSONObject) workSheet.get("Table");
+                        JSONArray rows = (JSONArray) table.get("Row");
+                        for(Object t: rows) {
+                            if(!graphicscard.isEmpty() && !graphicscard.isEmpty()) break;
+                            JSONObject row = (JSONObject) t;
+                            if(row.get("Cell") instanceof JSONArray) {
+                                JSONArray cell = (JSONArray) row.get("Cell");
+                                boolean copyNext = false;
+                                boolean codename = false;
+                                for(Object o: cell) {
+                                    if(o instanceof JSONObject) {
+                                        JSONObject r = (JSONObject) o;
+                                        if (r.containsKey("Data")) {
+                                            JSONObject data = (JSONObject) r.get("Data");
+                                            if (data.containsKey("content")) {
+                                                if(data.get("content") instanceof String) {
+                                                    String content = (String) data.get("content");
+                                                    if (content.equals("Code Name")) {
+                                                        copyNext = true;
+                                                        codename = true;
+                                                    } else if (content.equals("Processor Graphics \u2021")) {
+                                                        copyNext = true;
+                                                    } else if (copyNext) {
+                                                        if (codename) {
+                                                            family = content;
+                                                            codename = false;
+                                                        } else {
+                                                            graphicscard = content;
+                                                        }
+                                                        copyNext = false;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                    } catch (ParseException e) {
+                        e.printStackTrace();
+                    }
+                    System.out.println(family);
+                    System.out.println(format(removeHTML(graphicscard)));
+
+                    if(graphicscard.isEmpty() || format(removeHTML(graphicscard)).equals("Intel HD Graphics")) {
+                        switch (family) {
+                            case "Arrandale":
+                                return "Ark: " + result.getUrl() + "\n" + driverFor("81503", os);
+                            case "Bay Trail":
+                                return "Ark: " + result.getUrl() + "\n" + findDriver("Intel HD Graphics 2500", os);
+                            case "Clarkdale":
+                                return "Ark: " + result.getUrl() + "\n" + driverFor("81503", os);
+                            case "Haswell":
+                                return "Ark: " + result.getUrl() + "\n" + findDriver("Intel HD Graphics 4200", os);
+                            case "Ivy Bridge":
+                                return "Ark: " + result.getUrl() + "\n" + findDriver("Intel HD Graphics 2500", os);
+                            case "Sandy Bridge":
+                                return "Ark: " + result.getUrl() + "\n" + findDriver("Intel HD Graphics 3000", os);
+                            default:
+                                return "Ark: " + result.getUrl() + "\n" + "no drivers found for family " + family;
+
+                        }
+                    } else {
+                        return "Ark: " + result.getUrl() + "\n" + findDriver(format(removeHTML(graphicscard)), os);
+                    }
+
+                }
+
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (NullPointerException e) {
+                return "Rate-limited, try again in 10 seconds";
+            }
+        } else {
+            os = os.trim();
+            String result = "";
+            int count = 0;
+            String windows = os.split(" ")[1];
+            boolean showedExe = false;
+            for (Driver d : drivers) {
+                if (contains(d.name, driver)) {
+                    String exists = checkDrivers(d, removeEdition(os));
+                    result += ChatFormat.DARK_BLUE + d.url + ChatFormat.NORMAL + " - " + ChatFormat.RED + d.name + ChatFormat.NORMAL;
+                    if (exists.equals("true")) {
+                        boolean drivbit64 = os.contains("64");
+                        for (Download download : d.downloads) {
+                            boolean bit64 = download.os.contains("64");
+                            if (!download.name.toLowerCase().contains("inf")) {
+                                if (!showedExe || !download.url.toLowerCase().contains("zip")) {
+                                    if (download.url.toLowerCase().contains("exe")) showedExe = true;
+                                    if (contains(windows, download.os)) {
+                                        if (bit64 && drivbit64) {
+                                            if (count <= 1) {
+                                                result += "\n" + ChatFormat.RED + download.name + ChatFormat.NORMAL + " for " + ChatFormat.BLUE + download.os + ChatFormat.NORMAL + " " + ChatFormat.LIGHT_GRAY + download.version + ChatFormat.NORMAL + "\n" + ChatFormat.YELLOW + download.url + ChatFormat.NORMAL;
+                                                count++;
+                                            } else {
+                                                break;
+                                            }
+                                        } else if (!bit64 && !drivbit64) {
+                                            if (count <= 1) {
+                                                result += "\n" + ChatFormat.RED + download.name + ChatFormat.NORMAL + " for " + ChatFormat.BLUE + download.os + ChatFormat.NORMAL + " " + ChatFormat.LIGHT_GRAY + download.version + ChatFormat.NORMAL + "\n" + ChatFormat.BOLD + download.url + ChatFormat.NORMAL;
+                                                count++;
+                                            } else {
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        return exists;
+                    }
+                    break;
+                }
+            }
+            if(result.isEmpty()) return "Not found";
+            return result;
+        }
+        return "Error";
+    }
+
+    private String getEpmID(String url) {
+        //http://ark.intel.com/products/43529/Intel-Core-i3-350M-Processor-3M-Cache-2_26-GHz
+        String[] s = url.replace("http://", "").replace("https://", "").split("/");
+        System.out.println(s[2]);
+        return s[2];
+    }
+
+    private String driverFor(String s, String os) {
         String result = "";
         int count = 0;
         String windows = os.split(" ")[1];
         boolean showedExe = false;
         for(Driver d: drivers) {
-            if(contains(d.name, driver)) {
+            if(d.url.contains(s)) {
                 String exists = checkDrivers(d, removeEdition(os));
                 result += ChatFormat.DARK_BLUE + d.url + ChatFormat.NORMAL + " - " + ChatFormat.RED + d.name + ChatFormat.NORMAL;
                 if (exists.equals("true")) {
                     boolean drivbit64 = os.contains("64");
                     for (Download download : d.downloads) {
                         boolean bit64 = download.os.contains("64");
-                        if(!download.name.toLowerCase().contains("inf")) {
+                        if (!download.name.toLowerCase().contains("inf")) {
                             if (!showedExe || !download.url.toLowerCase().contains("zip")) {
-                                if(download.url.toLowerCase().contains("exe")) showedExe = true;
+                                if (download.url.toLowerCase().contains("exe")) showedExe = true;
                                 if (contains(windows, download.os)) {
                                     if (bit64 && drivbit64) {
                                         if (count <= 1) {
@@ -370,14 +529,18 @@ public class Main {
                 } else {
                     return exists;
                 }
-                break;
             }
         }
-        if(result.isEmpty()) return "Not found";
-        return result;
+        if(result.isEmpty()) {
+            return "Error: get from https://downloadcenter.intel.com/product/" + s;
+        } else {
+            return result;
+        }
     }
 
     public String format(String graphiccard) {
+        graphiccard = removeHTML(graphiccard);
+        graphiccard = graphiccard.replace("(R)", "").replace("(r)", "").trim();
         if (graphiccard.contains("45 Express Chipset")) graphiccard = "4 Series";
         if (graphiccard.contains("/")) {
             String words[] = graphiccard.split(" ");
@@ -391,4 +554,27 @@ public class Main {
     }
 
 
+    public void getCPU(String message) {
+        try {
+
+            URL url = new URL(message.replace(".dx ", "").trim());
+            InputStream is = url.openStream();  // throws an IOException
+            BufferedReader br = new BufferedReader(new InputStreamReader(is));
+            String line;
+            while ((line = br.readLine()) != null) {
+                if(line.contains("Processor: ")) {
+                    String tmp = line.replace("Processor: ", "").trim();
+                    String[] s = tmp.split(" ");
+                    tmp = String.join(" ", Arrays.copyOfRange(s, 2, s.length));
+                    cpu = tmp.substring(0, tmp.indexOf("@")-1).trim();
+                    System.out.println(cpu);
+                    break;
+                }
+            }
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

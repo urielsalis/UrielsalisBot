@@ -2,6 +2,10 @@ package me.urielsalis.IrcBot;
 
 import me.urielsalis.IRCApi.events.*;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -17,6 +21,11 @@ public class Listeners {
     @EventHandler("onRegistered")
     public void onRegistered(Event event) {
         System.out.println("OnRegistered");
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         for(String str: Save.channels) {
             Main.irc.join(str);
             System.out.println("<Join> " + str);
@@ -60,7 +69,7 @@ public class Listeners {
                 if (str[2].contains("HD") || str[2].contains("Graphics")) graphics = str[2];
                 if (str[3].contains("HD") || str[3].contains("Graphics")) graphics = str[3];
                 if (graphics != null) {
-                    String str2 = Main.main.findDriver(graphics, Main.main.tempOS);
+                    String str2 = Main.main.findDriver(Main.main.format(graphics), Main.main.tempOS);
                     if (!str2.equals("Not found")) Main.send(str2, event);
                 }
             } else {
@@ -71,13 +80,16 @@ public class Listeners {
                 Main.main.tempOS = os2;
                 if (data[3].contains("not find card")) return;
                 String tmp = data[3].replace("(R)", "");
-                String graphics = Main.main.removeHTML(Main.main.format(tmp.substring(tmp.indexOf("(") + 1, tmp.indexOf(")")).replace("(R)", "").replace("Family", "").replace("-Chipsatzfamilie", "")));
+                String graphics = Main.main.removeHTML(Main.main.format(tmp.substring(tmp.indexOf("(") + 1, tmp.indexOf(")")).replace("(R)", "").replace("Family", "").replace("-Chipsatzfamilie", "").replace("Familia", "")));
                 graphics = Main.main.format(graphics);
                 System.out.println(os2 + "-" + graphics);
                 String str2 = Main.main.findDriver(graphics, os2);
                 System.out.println(str2);
                 if (!str2.equals("Not found")) Main.send(str2, event);
             }
+        } else if(message.startsWith(".dx")) {
+            //get CPU and save it for the future
+            Main.main.getCPU(message);
         }
     }
 
