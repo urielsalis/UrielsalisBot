@@ -29,9 +29,6 @@ public class Listeners {
         for(String str: Save.channels) {
             Main.irc.join(str);
             System.out.println("<Join> " + str);
-            if(Main.main.count!=0) {
-                Main.irc.send(str, "Urielsalads reporting with " + Main.main.count + " downloads. Plz kill me");
-            }
         }
         Main.irc.send("Nickserv", "identify " + Save.nickservUser + " " + Save.nickservPass);
         System.out.println("<NickServ> identify ****** ******");

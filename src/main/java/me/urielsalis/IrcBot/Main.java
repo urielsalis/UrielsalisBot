@@ -37,7 +37,6 @@ public class Main {
     public HashMap<String, String> notes;
     public JSONParser parser = new JSONParser();
     public String tempOS;
-    int count = 0;
     public String cpu;
 
 
@@ -49,11 +48,35 @@ public class Main {
      */
     public static void main(String[] args) {
         main = new Main();
+        main.run();
     }
 
-    public Main() {
+    public void run() {
         initBot();
         loadOrDownload();
+        while(true) {
+            try {
+                Thread.yield();
+                BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+                System.out.print("> ");
+                String s = br.readLine();
+                if(s.equals("quit")) {
+                    break;
+                }
+
+                String first = s.split(" ")[0];
+                String extra = s.replace(first + " ", "");
+
+                if(s.startsWith("raw")) {
+                    irc.sendRaw(extra);
+                } else {
+
+                    irc.send(first, extra);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     /**
@@ -182,7 +205,6 @@ public class Main {
                         String driverName = removeHTML(s.substring(s.indexOf("\">")+2, s.indexOf("</a>")).replace("</a></li>", "")).trim();
                         Driver d = new Driver(driverName, driverUrl);
                         Driver d2 = driverDownloads(d);
-                        count += d2.downloads.size();
                         drivers.add(d2);
 
                     } else if(line.contains("</ul>")) {
@@ -454,14 +476,14 @@ public class Main {
                                     if (contains(windows, download.os)) {
                                         if (bit64 && drivbit64) {
                                             if (count <= 1) {
-                                                result += "\n" + ChatFormat.RED + download.name + ChatFormat.NORMAL + " for " + ChatFormat.BLUE + download.os + ChatFormat.NORMAL + " " + ChatFormat.LIGHT_GRAY + download.version + ChatFormat.NORMAL + "\n" + ChatFormat.YELLOW + download.url + ChatFormat.NORMAL;
+                                                result += "\n" + ChatFormat.RED + download.name + ChatFormat.NORMAL + " for " + ChatFormat.BLUE + download.os + ChatFormat.NORMAL + " " + ChatFormat.LIGHT_GRAY + download.version + ChatFormat.NORMAL + " " + ChatFormat.YELLOW + download.url + ChatFormat.NORMAL;
                                                 count++;
                                             } else {
                                                 break;
                                             }
                                         } else if (!bit64 && !drivbit64) {
                                             if (count <= 1) {
-                                                result += "\n" + ChatFormat.RED + download.name + ChatFormat.NORMAL + " for " + ChatFormat.BLUE + download.os + ChatFormat.NORMAL + " " + ChatFormat.LIGHT_GRAY + download.version + ChatFormat.NORMAL + "\n" + ChatFormat.BOLD + download.url + ChatFormat.NORMAL;
+                                                result += "\n" + ChatFormat.RED + download.name + ChatFormat.NORMAL + " for " + ChatFormat.BLUE + download.os + ChatFormat.NORMAL + " " + ChatFormat.LIGHT_GRAY + download.version + ChatFormat.NORMAL + " " +  ChatFormat.YELLOW + download.url + ChatFormat.NORMAL;
                                                 count++;
                                             } else {
                                                 break;
@@ -509,14 +531,14 @@ public class Main {
                                 if (contains(windows, download.os)) {
                                     if (bit64 && drivbit64) {
                                         if (count <= 1) {
-                                            result += "\n" + ChatFormat.RED + download.name + ChatFormat.NORMAL + " for " + ChatFormat.BLUE + download.os + ChatFormat.NORMAL + " " + ChatFormat.LIGHT_GRAY + download.version + ChatFormat.NORMAL + "\n" + ChatFormat.YELLOW + download.url + ChatFormat.NORMAL;
+                                            result += "\n" + ChatFormat.RED + download.name + ChatFormat.NORMAL + " for " + ChatFormat.BLUE + download.os + ChatFormat.NORMAL + " " + ChatFormat.LIGHT_GRAY + download.version + ChatFormat.NORMAL + " " + ChatFormat.YELLOW + download.url + ChatFormat.NORMAL;
                                             count++;
                                         } else {
                                             break;
                                         }
                                     } else if (!bit64 && !drivbit64) {
                                         if (count <= 1) {
-                                            result += "\n" + ChatFormat.RED + download.name + ChatFormat.NORMAL + " for " + ChatFormat.BLUE + download.os + ChatFormat.NORMAL + " " + ChatFormat.LIGHT_GRAY + download.version + ChatFormat.NORMAL + "\n" + ChatFormat.BOLD + download.url + ChatFormat.NORMAL;
+                                            result += "\n" + ChatFormat.RED + download.name + ChatFormat.NORMAL + " for " + ChatFormat.BLUE + download.os + ChatFormat.NORMAL + " " + ChatFormat.LIGHT_GRAY + download.version + ChatFormat.NORMAL + " " + ChatFormat.YELLOW + download.url + ChatFormat.NORMAL;
                                             count++;
                                         } else {
                                             break;
