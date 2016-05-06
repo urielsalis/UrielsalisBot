@@ -2,11 +2,8 @@ package me.urielsalis.IrcBot;
 
 import me.urielsalis.IRCApi.events.*;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 
 /**
@@ -18,6 +15,7 @@ public class Listeners {
      *
      * @param event OnRegistered event. Ignored
      */
+
     @EventHandler("onRegistered")
     public void onRegistered(Event event) {
         System.out.println("OnRegistered");
@@ -84,9 +82,44 @@ public class Listeners {
                 System.out.println(str2);
                 if (!str2.equals("Not found")) Main.send(str2, event);
             }
+        } else if(message.contains("Enum\\ROOT\\BASICDISPLAY")) {
+            String data[] = message.split("\\|");
+            String os2 = Main.main.removeEdition(data[2].replace("-bit", "")).replace(" 64", "").replace(" 32", "");
+            if (data[2].contains("32")) os2 += " 32";
+            else if (data[2].contains("64")) os2 += " 64";
+            Main.main.tempOS = os2;
         } else if(message.startsWith(".dx")) {
-            //get CPU and save it for the future
+            //get CPU and save it for the future in Main.main.tempOS
             Main.main.getCPU(message);
+        } else if(message.contains("(PCI\\VEN_8086")) {
+            String graphics = message.substring(message.indexOf("Intel")-1, message.indexOf("(PCI")-1).trim();
+            System.out.println(graphics);
+            String str[] = message.split(", ");
+            System.out.println(Main.main.tempOS);
+            System.out.println(Main.main.format(graphics));
+            String str2 = Main.main.findDriver(Main.main.format(graphics), Main.main.tempOS);
+            if (!str2.equals("Not found")) Main.send(str2, event);
+
+        }
+    }
+
+    @Command("send")
+    public void send(Event event, String[] args) {
+        OnPrivmsg e = (OnPrivmsg) event;
+        if(e.u.getUsername().equals("urielsalis")) {
+            StringBuilder builder = new StringBuilder();
+            for(String s : args) {
+                builder.append(s + " ");
+            }
+            String arg = builder.toString();
+            String first = arg.split(" ")[0];
+            String extra = arg.replace(first + " ", "");
+            if(arg.startsWith("raw")) {
+                Main.irc.sendRaw(extra);
+            } else {
+                Main.irc.send(first, extra);
+            }
+
         }
     }
 

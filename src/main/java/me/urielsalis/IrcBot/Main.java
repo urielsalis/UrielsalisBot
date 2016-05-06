@@ -13,11 +13,12 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import java.io.*;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLEncoder;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
@@ -48,7 +49,11 @@ public class Main {
      */
     public static void main(String[] args) {
         main = new Main();
-        main.run();
+        try {
+            main.run();
+        } catch(NullPointerException e) {
+            System.exit(1);
+        }
     }
 
     public void run() {
@@ -359,15 +364,38 @@ public class Main {
 
     public String findDriver(String driver, String os) {
         driver = driver.trim();
-        if(driver.equals("Intel HD Graphics")) {
+        if(driver.equals("Intel HD Graphics") || driver.equals("Microsoft Basic Display Adapter")) {
             //ark.intel.com
             try {
-                URL url = new URL("http://ajax.googleapis.com/ajax/services/search/web?v=1.0&q=" + URLEncoder.encode(cpu, "UTF-8"));
-                Reader reader = new InputStreamReader(url.openStream(), "UTF-8");
-                GoogleResults results = new Gson().fromJson(reader, GoogleResults.class);
-                GoogleResults.Result result = results.getResponseData().getResults().get(0);
-                if(result.getUrl().contains("ark.intel.com")) {
-                    URL url2 = new URL("http://ark.intel.com/compare/" +getEpmID(result.getUrl()) + "?e=t");
+                String google = "http://www.google.com/search?q=";
+                String search = URLEncoder.encode(cpu, "UTF-8");
+                String charset = "UTF-8";
+                String userAgent = "UrielsalisBot 1.0 (+github.com/turtlehunter/UrielsalisBot) uriel@urielsalis.me"; // Change this to your company's name and bot homepage!
+
+                Elements links = Jsoup.connect(google + URLEncoder.encode(search, charset)).userAgent(userAgent).get().select(".g>.r>a");
+
+                String url = null;
+
+                for (Element link : links) {
+                    String title = link.text();
+                    url = link.absUrl("href"); // Google returns URLs in format "http://www.google.com/url?q=<url>&sa=U&ei=<someKey>".
+                    url = URLDecoder.decode(url.substring(url.indexOf('=') + 1, url.indexOf('&')), "UTF-8");
+
+                    if (!url.startsWith("http")) {
+                        continue; // Ads/news/etc.
+                    }
+
+                    System.out.println("URL: " + url);
+                    if(url.contains("ark.intel.com")) {
+                        break;
+                    }
+                }
+
+                //TODO Broken
+
+                if(url != null && url.contains("ark.intel.com")) {
+                    url = url.replace("/es", "");
+                    URL url2 = new URL("http://ark.intel.com/compare/" +getEpmID(url) + "?e=t");
                     String graphicscard = "";
                     String family = "";
                     Scanner scanner = new Scanner(url2.openStream(), "UTF-8");
@@ -429,23 +457,23 @@ public class Main {
                     if(graphicscard.isEmpty() || format(removeHTML(graphicscard)).equals("Intel HD Graphics")) {
                         switch (family) {
                             case "Arrandale":
-                                return "Ark: " + result.getUrl() + "\n" + driverFor("81503", os);
+                                return "Ark: " + url + "\n" + driverFor("81503", os);
                             case "Bay Trail":
-                                return "Ark: " + result.getUrl() + "\n" + findDriver("Intel HD Graphics 2500", os);
+                                return "Ark: " + url + "\n" + findDriver("Intel HD Graphics 2500", os);
                             case "Clarkdale":
-                                return "Ark: " + result.getUrl() + "\n" + driverFor("81503", os);
+                                return "Ark: " + url + "\n" + driverFor("81503", os);
                             case "Haswell":
-                                return "Ark: " + result.getUrl() + "\n" + findDriver("Intel HD Graphics 4200", os);
+                                return "Ark: " + url + "\n" + findDriver("Intel HD Graphics 4200", os);
                             case "Ivy Bridge":
-                                return "Ark: " + result.getUrl() + "\n" + findDriver("Intel HD Graphics 2500", os);
+                                return "Ark: " + url + "\n" + findDriver("Intel HD Graphics 2500", os);
                             case "Sandy Bridge":
-                                return "Ark: " + result.getUrl() + "\n" + findDriver("Intel HD Graphics 3000", os);
+                                return "Ark: " + url + "\n" + findDriver("Intel HD Graphics 3000", os);
                             default:
-                                return "Ark: " + result.getUrl() + "\n" + "no drivers found for family " + family;
+                                return "Ark: " + url + "\n" + "no drivers found for family " + family;
 
                         }
                     } else {
-                        return "Ark: " + result.getUrl() + "\n" + findDriver(format(removeHTML(graphicscard)), os);
+                        return "Ark: " + url + "\n" + findDriver(format(removeHTML(graphicscard)), os);
                     }
 
                 }
@@ -593,8 +621,6 @@ public class Main {
                     break;
                 }
             }
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
