@@ -87,11 +87,15 @@
             <groupId>me.urielsalis</groupId>
             <artifactId>IRCApi</artifactId>
             <version>1.0-SNAPSHOT</version>
+            <scope>system</scope>
+            <systemPath>/home/urielsalis/Projects/UrielsalisBot/lib/IRCApi-1.0-SNAPSHOT.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>local</groupId>
             <artifactId>irclib</artifactId>
             <version>1.0-SNAPSHOT</version>
+            <scope>system</scope>
+            <systemPath>/home/urielsalis/Projects/UrielsalisBot/lib/irclib.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.jsoup</groupId>

@@ -1,4 +1,4 @@
-package me.urielsalis.IrcBot;
+package me.urielsalis.urielsalisBot;
 
 /**
  * @author Uriel Salischiker
