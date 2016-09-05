@@ -1,4 +1,7 @@
 channel.txt
+config.properties
+hjt.json
+results.json
 .idea
 target
 out
