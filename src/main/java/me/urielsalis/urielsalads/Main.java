@@ -17,6 +17,7 @@ import org.apache.log4j.Logger;
 
 import java.io.*;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
@@ -83,7 +84,11 @@ public class Main {
     private static void init() {
         IntelDatabase.download();
         _api = new IRCApiImpl(true);
-        _api.connect(getServerParams("UrielSalads", Arrays.asList("UrielSalads2", "UrielBot"), "UrielSalads", "salads", "irc.esper.net", false), new Callback<IIRCState>() {
+        String host = prop.getProperty("host");
+        String server = prop.getProperty("server");
+        String[] nicks = prop.getProperty("nicks").split(",");
+
+        _api.connect(getServerParams(nicks[0], getList(nicks), nicks[0], host, server, false), new Callback<IIRCState>() {
             public void onSuccess(final IIRCState aIRCState) {
                 run();
             }
@@ -92,6 +97,14 @@ public class Main {
                 throw new RuntimeException(aErrorMessage);
             }
         });
+    }
+
+    private static List<String> getList(String[] nicks) {
+        ArrayList<String> strs = new ArrayList<>();
+        for (int i = 1; i < nicks.length; i++) {
+            strs.add(nicks[i]);
+        }
+        return strs;
     }
 
     private static void run() {
