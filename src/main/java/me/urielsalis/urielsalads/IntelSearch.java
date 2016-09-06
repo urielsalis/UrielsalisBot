@@ -43,7 +43,7 @@ public class IntelSearch {
                 String graphicsModel = null;
                 if(!graphics.isNull()) graphicsModel = graphics.asString();
                 int codeNameEPMId = cpuInfo.get("CodeNameEPMId").asInt();
-                if(graphicsModel != null && !Util.matches("Intel HD Graphics", graphicsModel)) {
+                if(graphicsModel != null && !graphicsModel.equals("Intel® HD Graphics")) {
                     for(Object tmp2: IntelDatabase.gpus) {
                         GPU gpu = (GPU) tmp2;
                         if(Util.matches(gpu.getName(), graphicsModel)) {
@@ -217,11 +217,12 @@ public class IntelSearch {
                 Main.jsonObject.add(url, tmp);
                 Main.save();
             }
-            if(name == null || name.isEmpty() || name.equals("Intel(R) HD Graphics Family") || name.contains("Microsoft Basic Display")) {
+            if(name == null || name.isEmpty() || name.equals("Intel(R) HD Graphics Family") || name.equals("Intel(R) HD Graphics")|| name.contains("Microsoft Basic Display")) {
                 if(cpu == null) return "No driver found";
                 return findCPU(cpu, os);
             } else {
                 //gpu
+                if(name.contains("/")) name = splitSlash(name);
                 for(Object tmp2: IntelDatabase.gpus) {
                     GPU gpu = (GPU) tmp2;
                     if(Util.matches(gpu.getName(), name)) {
@@ -261,6 +262,10 @@ public class IntelSearch {
             e.printStackTrace();
         }
         return url;
+    }
+
+    private static String splitSlash(String name) {
+        return name.split("/")[0];
     }
 
 }

@@ -32,7 +32,7 @@ public class IntelDatabase {
             Elements items = table.select("li");
             for(Element element: items) {
                 Element a = element.select("a").first();
-                String driver = a.text();
+                String driver = a.text().replace("Graphics Drivers for ", "");
                 String url = a.attr("href");
                 String epmID = url.split("/")[2];
                 GPU gpu = getDriver(driver, epmID);
