@@ -13,7 +13,7 @@ import java.net.URL;
  * Created by urielsalis on 04/09/16.
  */
 public class IntelSearch {
-    public static String API_KEY = ""
+    public static String API_KEY = "";
     public static String lastDriver(GPU gpu) {
         if(gpu.isWindows81()) return "Not found. Latest: Windows 8.1";
         if(gpu.isWindows8()) return "Not found. Latest: Windows 8";
