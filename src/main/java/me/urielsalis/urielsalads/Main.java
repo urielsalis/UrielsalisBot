@@ -53,6 +53,7 @@ public class Main {
             githubUser = prop.getProperty("githubUser");
             githubPass = prop.getProperty("githubPass");
             nickServPass = prop.getProperty("nickServPass");
+            IntelSearch.API_KEY = prop.getProperty("api_key");
 
         } catch (IOException e) {
             e.printStackTrace();
