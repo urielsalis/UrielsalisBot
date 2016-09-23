@@ -13,7 +13,7 @@ import java.net.URL;
  * Created by urielsalis on 04/09/16.
  */
 public class IntelSearch {
-
+    public static String API_KEY = ""
     public static String lastDriver(GPU gpu) {
         if(gpu.isWindows81()) return "Not found. Latest: Windows 8.1";
         if(gpu.isWindows8()) return "Not found. Latest: Windows 8";
@@ -37,7 +37,7 @@ public class IntelSearch {
         }
         try {
             if(cpu != null) {
-                JsonObject json = Json.parse(IOUtils.toString(new URL("http://odata.intel.com/API/v1_0/Products/Processors()?api_key=***REMOVED***&$select=ProductId,CodeNameEPMId,GraphicsModel&$filter=substringof(%27" + cpu + "%27,ProductName)&$format=json"))).asObject();
+                JsonObject json = Json.parse(IOUtils.toString(new URL("http://odata.intel.com/API/v1_0/Products/Processors()?api_key="+ API_KEY +"&$select=ProductId,CodeNameEPMId,GraphicsModel&$filter=substringof(%27" + cpu + "%27,ProductName)&$format=json"))).asObject();
                 JsonObject cpuInfo = json.get("d").asArray().get(0).asObject();
                 JsonValue graphics = cpuInfo.get("GraphicsModel");
                 String graphicsModel = null;
@@ -79,7 +79,7 @@ public class IntelSearch {
                     }
                 } else {
                     //find codename
-                    JsonObject json2 = Json.parse(IOUtils.toString(new URL("http://odata.intel.com/API/v1_0/Products/CodeNames()?api_key=***REMOVED***&$select=CodeNameText&$filter=CodeNameId%20eq%20" + codeNameEPMId + "&$format=json"))).asObject();
+                    JsonObject json2 = Json.parse(IOUtils.toString(new URL("http://odata.intel.com/API/v1_0/Products/CodeNames()?api_key=" + API_KEY + "&$select=CodeNameText&$filter=CodeNameId%20eq%20" + codeNameEPMId + "&$format=json"))).asObject();
                     String codename = json2.get("d").asArray().get(0).asObject().get("CodeNameText").asString();
                     switch (codename) {
                         case "Arrandale":
