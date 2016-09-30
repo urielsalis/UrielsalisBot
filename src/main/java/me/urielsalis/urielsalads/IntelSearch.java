@@ -82,9 +82,12 @@ public class IntelSearch {
                     JsonObject json2 = Json.parse(IOUtils.toString(new URL("http://odata.intel.com/API/v1_0/Products/CodeNames()?api_key=8A5F48B811A34F2B9A06C1F6BDDFECAD&$select=CodeNameText&$filter=CodeNameId%20eq%20" + codeNameEPMId + "&$format=json"))).asObject();
                     String codename = json2.get("d").asArray().get(0).asObject().get("CodeNameText").asString();
                     switch (codename) {
+                        case "Braswell":
+                            if(!os.equals("10")) return "Only avalible for Windows 10";
+                            return show(25176);
                         case "Arrandale":
                             if(os.equals("10") || os.equals("8.1") || os.equals("8")) return "Latest: Windows 7";
-                            return "Find driver in https://downloadcenter.intel.com/product/81503 (Latest Windows 7)";
+                            return show(81503);
                         case "Bay Trail":
                             for(Object tmp2: IntelDatabase.gpus) {
                                 GPU gpu = (GPU) tmp2;
@@ -103,7 +106,7 @@ public class IntelSearch {
                             }
                         case "Clarkdale":
                             if(os.equals("10") || os.equals("8.1") || os.equals("8")) return "Latest: Windows 7";
-                            return "Find driver in https://downloadcenter.intel.com/product/81503 (Latest Windows 7)";
+                            return show(81503);
                         case "Haswell":
                             for(Object tmp2: IntelDatabase.gpus) {
                                 GPU gpu = (GPU) tmp2;
@@ -222,6 +225,7 @@ public class IntelSearch {
                 return findCPU(cpu, os);
             } else {
                 //gpu
+                if(name.startsWith("Mobile Intel(R) 45 Express Chipset Family")) name="Mobile Intel(R) 4 Express Chipset Family";
                 if(name.contains("/")) name = splitSlash(name);
                 for(Object tmp2: IntelDatabase.gpus) {
                     GPU gpu = (GPU) tmp2;
