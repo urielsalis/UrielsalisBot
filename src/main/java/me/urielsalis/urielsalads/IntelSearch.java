@@ -83,8 +83,15 @@ public class IntelSearch {
                     String codename = json2.get("d").asArray().get(0).asObject().get("CodeNameText").asString();
                     switch (codename) {
                         case "Braswell":
-                            if(!os.equals("10")) return "Only avalible for Windows 10";
-                            return show(25176);
+                            if(os.equals("8")) return "Not avaliable for Windows 8";
+                            switch (os) {
+                                case "10":
+                                    return "32bit: " + show(25176) + "\n64bit: " + show(25149);
+                                case "7":
+                                    return show(25235);
+                                case "8.1":
+                                    return show(25235);
+                            }
                         case "Arrandale":
                             if(os.equals("10") || os.equals("8.1") || os.equals("8")) return "Latest: Windows 7";
                             return show(81503);
