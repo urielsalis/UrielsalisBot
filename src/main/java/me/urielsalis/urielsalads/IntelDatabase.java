@@ -68,12 +68,22 @@ public class IntelDatabase {
                 int download = result.get("Id").asInt();
                 for(JsonValue t2: osSet) {
                     String osName = t2.asString();
-                    if (osName.contains("7") && gpu.windows7Download==0) gpu.windows7Download = download;
-                    if (osName.contains("8") && !osName.contains("8.1") && gpu.windows8Download==0) gpu.windows8Download = download;
-                    if (osName.contains("8.1") && gpu.windows81Download==0) gpu.windows81Download = download;
-                    if (osName.contains("10") && gpu.windows10Download==0) gpu.windows10Download = download;
+                    if((osName.contains("7, 32-bit") || osName.contains("7 32")) && gpu.windows7Download==0 ) gpu.windows7Download = download;
+                    if((osName.contains("8, 32-bit") || osName.contains("8 32")) && gpu.windows8Download==0 ) gpu.windows8Download = download;
+                    if((osName.contains("8.1, 32-bit") || osName.contains("8.1 32")) && gpu.windows81Download==0 ) gpu.windows81Download = download;
+                    if((osName.contains("10, 32-bit") || osName.contains("10 32")) && gpu.windows10Download==0 ) gpu.windows10Download = download;
+                    if((osName.contains("7, 64-bit") || osName.contains("64 32")) && gpu.windows764Download==0 ) gpu.windows764Download = download;
+                    if((osName.contains("8, 64-bit") || osName.contains("64 32")) && gpu.windows864Download==0 ) gpu.windows864Download = download;
+                    if((osName.contains("8.1, 64-bit") || osName.contains("64 32")) && gpu.windows8164Download==0 ) gpu.windows8164Download = download;
+                    if((osName.contains("10, 64-bit") || osName.contains("64 32")) && gpu.windows1064Download==0 ) gpu.windows1064Download = download;
+
                 }
                 if(gpu.allDownloadsFilled()) break;
+            }
+
+            if(epmID.equals("81507")) {
+                gpu.windows8Download = 0;
+                gpu.setWindows8(false);
             }
 
             return gpu;

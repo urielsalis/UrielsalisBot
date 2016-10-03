@@ -15,9 +15,14 @@ import java.net.URL;
 public class IntelSearch {
 
     public static String lastDriver(GPU gpu) {
-        if(gpu.isWindows81()) return "Not found. Latest: Windows 8.1";
-        if(gpu.isWindows8()) return "Not found. Latest: Windows 8";
-        if(gpu.isWindows7()) return "Not found. Latest: Windows 7";
+        if(gpu.isWindows1064()) return "Not found: Latest: Windows 10 64";
+        if(gpu.isWindows8164()) return "Not found: Latest: Windows 8.1 64";
+        if(gpu.isWindows864()) return "Not found: Latest: Windows 8 64";
+        if(gpu.isWindows764()) return "Not found: Latest: Windows 7 64";
+        if(gpu.isWindows10()) return "Not found: Latest: Windows 10 32";
+        if(gpu.isWindows81()) return "Not found: Latest: Windows 8.1 32";
+        if(gpu.isWindows8()) return "Not found: Latest: Windows 8 32";
+        if(gpu.isWindows7()) return "Not found: Latest: Windows 7 32";
         return "Not found. Latest below Windows 7";
     }
 
@@ -86,7 +91,7 @@ public class IntelSearch {
                             if(os.equals("8")) return "Not avaliable for Windows 8";
                             switch (os) {
                                 case "10":
-                                    return "32bit: " + show(25176) + "\n64bit: " + show(25149);
+                                    return "64bit: " + show(25176) + "   32bit: " + show(25149);
                                 case "7":
                                     return show(25235);
                                 case "8.1":
@@ -188,6 +193,7 @@ public class IntelSearch {
             JsonArray cpus = new JsonArray();
             JsonArray gpus = new JsonArray();
             JsonArray oss = new JsonArray();
+            boolean is64 = false;
             boolean other = false;
             for(String str: lines) {
                 if(str.trim().startsWith("Processor: ")) {
@@ -195,6 +201,7 @@ public class IntelSearch {
                     cpus.add(cpu);
                 }
                 if(str.trim().startsWith("Operating System")) {
+                    is64 = str.contains("64");
                     os = str.substring(str.lastIndexOf(":")+1).trim().split("\\s+")[1];
                     oss.add(os);
                 }
@@ -237,31 +244,28 @@ public class IntelSearch {
                 for(Object tmp2: IntelDatabase.gpus) {
                     GPU gpu = (GPU) tmp2;
                     if(Util.matches(gpu.getName(), name)) {
-                        switch (os) {
-                            case "10":
-                                if(gpu.isWindows10()) {
-                                    return show(gpu.windows10Download);
-                                } else {
-                                    return lastDriver(gpu);
-                                }
-                            case "8.1":
-                                if(gpu.isWindows81()) {
-                                    return show(gpu.windows81Download);
-                                } else {
-                                    return lastDriver(gpu);
-                                }
-                            case "8":
-                                if(gpu.isWindows8()) {
-                                    return show(gpu.windows8Download);
-                                } else {
-                                    return lastDriver(gpu);
-                                }
-                            case "7":
-                                if(gpu.isWindows7()) {
-                                    return show(gpu.windows7Download);
-                                } else {
-                                    return lastDriver(gpu);
-                                }
+                        if(is64) {
+                            switch (os) {
+                                case "10":
+                                    return gpu.isWindows1064() ? show(gpu.windows1064Download) : lastDriver(gpu);
+                                case "8.1":
+                                    return gpu.isWindows8164() ? show(gpu.windows8164Download) : lastDriver(gpu);
+                                case "8":
+                                    return gpu.isWindows864() ? show(gpu.windows864Download) : lastDriver(gpu);
+                                case "7":
+                                    return gpu.isWindows764() ? show(gpu.windows764Download) : lastDriver(gpu);
+                            }
+                        } else {
+                            switch (os) {
+                                case "10":
+                                    return gpu.isWindows10() ? show(gpu.windows10Download) : lastDriver(gpu);
+                                case "8.1":
+                                    return gpu.isWindows81() ? show(gpu.windows81Download) : lastDriver(gpu);
+                                case "8":
+                                    return gpu.isWindows8() ? show(gpu.windows8Download) : lastDriver(gpu);
+                                case "7":
+                                    return gpu.isWindows7() ? show(gpu.windows7Download) : lastDriver(gpu);
+                            }
                         }
                         break;
                     }

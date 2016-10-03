@@ -38,26 +38,6 @@ public class MessageListener extends VariousMessageListenerAdapter {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        } else if(command[0].equals(".addHJT")) {
-            String add = fullString(command);
-            Main.hjt.add(add);
-            Main.save();
-            _api.message(aMsg.getChannelName(), IntelSearch.parseDxdiag(add + " added to database"));
-        } else if(command[0].equals(".rmHJT")) {
-            String compare = command[1].toLowerCase();
-            for (int i = 0; i < Main.hjt.size(); i++) {
-                String s = Main.hjt.get(i).asString();
-                if(s.split("=")[0].toLowerCase().equals(compare)) {
-                    Main.hjt.remove(i);
-                    Main.save();
-                    _api.message(aMsg.getChannelName(), IntelSearch.parseDxdiag(s + " removed!"));
-                    return;
-                }
-            }
-            _api.message(aMsg.getChannelName(), IntelSearch.parseDxdiag("Not found in hjt database!"));
-        } else if(command[0].equals(".hjt")) {
-            String link = command[1];
-            _api.message(aMsg.getChannelName(), HJT.parse(link));
         }
 
     }

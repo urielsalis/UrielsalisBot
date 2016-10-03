@@ -29,7 +29,6 @@ public class Main {
     public static IRCApi _api;
     private static final Logger logger = LogManager.getLogger("UrielsalisBOT");
     public static JsonObject jsonObject = new JsonObject();
-    public static JsonArray hjt = new JsonArray();
     public static Properties prop = new Properties();
 
     public static String githubUser;
@@ -40,7 +39,6 @@ public class Main {
         BasicConfigurator.configure();
         loadProperties();
         loadResults();
-        loadHJT();
 
         init();
     }
@@ -64,17 +62,6 @@ public class Main {
         if(json.exists()) {
             try {
                 jsonObject = Json.parse(new FileReader(json)).asObject();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private static void loadHJT() {
-        File json = new File("hjt.json");
-        if(json.exists()) {
-            try {
-                hjt = Json.parse(new FileReader(json)).asArray();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -147,7 +134,6 @@ public class Main {
     public static void save() {
         try {
             IOUtils.write(jsonObject.toString(), new FileOutputStream("results.json"));
-            IOUtils.write(hjt.toString(), new FileOutputStream("hjt.json"));
         } catch (IOException e) {
             e.printStackTrace();
         }
