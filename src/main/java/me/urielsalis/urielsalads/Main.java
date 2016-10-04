@@ -34,6 +34,7 @@ public class Main {
     public static String githubUser;
     public static String githubPass;
     public static String nickServPass;
+    public static String APIKEY;
 
     public static void main(String[] args) {
         BasicConfigurator.configure();
@@ -51,6 +52,7 @@ public class Main {
             githubUser = prop.getProperty("githubUser");
             githubPass = prop.getProperty("githubPass");
             nickServPass = prop.getProperty("nickServPass");
+            APIKEY = prop.getProperty("apikey");
 
         } catch (IOException e) {
             e.printStackTrace();
